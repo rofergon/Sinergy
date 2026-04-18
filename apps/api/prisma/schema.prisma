@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id                String         @id @default(cuid())
+  legalName         String
+  displayName       String
+  country           String
+  onboardingStatus  String
+  webhookUrl        String?
+  users             User[]
+  beneficiaries     Beneficiary[]
+  batches           Batch[]
+  authorizedWallets AuthorizedWallet[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model AuthorizedWallet {
+  id        String   @id @default(cuid())
+  companyId String
+  address   String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id         String   @id @default(cuid())
+  companyId  String
+  email      String   @unique
+  name       String
+  role       String
+  password   String
+  isActive   Boolean  @default(true)
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Beneficiary {
+  id                String   @id @default(cuid())
+  companyId         String
+  name              String
+  email             String
+  country           String
+  currency          String
+  kind              String
+  bankName          String
+  accountHolderName String
+  accountNumber     String?
+  accountType       String?
+  clabe             String?
+  documentNumber    String?
+  validationStatus  String
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payouts           Payout[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Batch {
+  id               String             @id @default(cuid())
+  companyId        String
+  name             String
+  createdByUserId  String
+  status           String
+  totalLocal       Decimal            @db.Decimal(18, 2)
+  totalFundingUsdc Decimal            @db.Decimal(18, 6)
+  quoteId          String?
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payouts          Payout[]
+  quotes           Quote[]
+  approvals        ApprovalDecision[]
+  funding          FundingInstruction[]
+  complianceCases  ComplianceCase[]
+  exceptions       ExceptionCase[]
+  ledgerEntries    LedgerEntry[]
+  auditLogs        AuditLog[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model Payout {
+  id                String          @id @default(cuid())
+  batchId           String
+  beneficiaryId     String
+  beneficiaryName   String
+  country           String
+  currency          String
+  amountLocal       Decimal         @db.Decimal(18, 2)
+  feeLocal          Decimal         @db.Decimal(18, 2)
+  fxRate            Decimal         @db.Decimal(18, 6)
+  fundingAmountUsdc Decimal         @db.Decimal(18, 6)
+  status            String
+  partnerRoute      String
+  validationErrors  Json
+  batch             Batch           @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  beneficiary       Beneficiary     @relation(fields: [beneficiaryId], references: [id], onDelete: Restrict)
+  complianceCases   ComplianceCase[]
+  exceptions        ExceptionCase[]
+  ledgerEntries     LedgerEntry[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Quote {
+  id               String      @id @default(cuid())
+  batchId          String
+  expiresAt        DateTime
+  totalFundingUsdc Decimal     @db.Decimal(18, 6)
+  totalFeesLocal   Decimal     @db.Decimal(18, 2)
+  snapshot         Json
+  batch            Batch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdAt        DateTime    @default(now())
+}
+
+model FundingInstruction {
+  id             String               @id @default(cuid())
+  batchId        String
+  chain          String
+  asset          String
+  walletAddress  String
+  expectedAmount Decimal              @db.Decimal(18, 6)
+  memo           String?
+  status         String
+  batch          Batch                @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  transactions   FundingTransaction[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+}
+
+model FundingTransaction {
+  id                   String             @id @default(cuid())
+  fundingInstructionId String
+  txHash               String             @unique
+  amountReceived       Decimal            @db.Decimal(18, 6)
+  status               String
+  fundingInstruction   FundingInstruction @relation(fields: [fundingInstructionId], references: [id], onDelete: Cascade)
+  createdAt            DateTime           @default(now())
+}
+
+model ApprovalDecision {
+  id        String   @id @default(cuid())
+  batchId   String
+  actorId   String
+  actorName String
+  outcome   String
+  comment   String?
+  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ComplianceCase {
+  id         String   @id @default(cuid())
+  batchId     String?
+  payoutId    String?
+  reason      String
+  status      String
+  reviewerId  String?
+  resolvedAt  DateTime?
+  batch       Batch?   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  payout      Payout?  @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model LedgerEntry {
+  id        String   @id @default(cuid())
+  batchId   String?
+  payoutId  String?
+  type      String
+  amount    Decimal  @db.Decimal(18, 6)
+  currency  String
+  note      String
+  batch     Batch?   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  payout    Payout?  @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model WebhookEvent {
+  id        String   @id @default(cuid())
+  direction String
+  source    String
+  eventId   String   @unique
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  batchId   String?
+  entityType String
+  entityId  String
+  action    String
+  actorType String
+  actorId   String
+  actorName String
+  metadata  Json?
+  batch     Batch?   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ExceptionCase {
+  id         String   @id @default(cuid())
+  batchId    String?
+  payoutId   String?
+  type       String
+  country    String?
+  status     String
+  summary    String
+  resolvedAt DateTime?
+  batch      Batch?   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  payout     Payout?  @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
