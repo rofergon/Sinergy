@@ -1,0 +1,12 @@
+node_modules
+dist
+.turbo
+.cache
+coverage
+.env
+.env.local
+.DS_Store
+pnpm-lock.yaml
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal
+
