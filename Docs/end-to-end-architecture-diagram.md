@@ -9,30 +9,31 @@ flowchart LR
     U[Finance / Approver / Compliance User]
 
     subgraph FE[Frontend]
-        W[React Operations Console\napps/web]
-        APIClient[API Client\nsrc/lib/api.ts]
-        Routes[Pages and Routing\nApp.tsx]
+        W["React Operations Console<br/>apps/web"]
+        APIClient["API Client<br/>src/lib/api.ts"]
+        Routes["Pages and Routing<br/>App.tsx"]
     end
 
     subgraph Shared[Shared Contracts]
-        C[Domain Types / DTOs / Enums\npackages/contracts]
+        C["Domain Types / DTOs / Enums<br/>packages/contracts"]
     end
 
     subgraph BE[Backend]
-        N[NestJS API\napps/api]
+        N["NestJS API<br/>apps/api"]
         Auth[Demo Auth + Roles Guards]
-        Ctrl[Controllers\ncompany, beneficiaries, batches,\nfunding, payouts, exceptions,\ncompliance, reports, audit]
-        Domain[DemoDomainService\nin-memory business flow]
+        Ctrl["Controllers<br/>company, beneficiaries, batches,<br/>funding, payouts, exceptions,<br/>compliance, reports, audit"]
+        Domain["DemoDomainService<br/>in-memory business flow"]
     end
 
     subgraph Data[Persistence Layer]
-        Prisma[Prisma Schema\napps/api/prisma/schema.prisma]
-        PG[(PostgreSQL)\nplanned / not active in runtime]
+        Prisma["Prisma Schema<br/>apps/api/prisma/schema.prisma"]
+        PG[(PostgreSQL)]
+        PGState[Planned only; not active at runtime]
     end
 
     subgraph External[External Rails / Integrations]
-        Solana[USDC on Solana\nmocked funding flow]
-        Partners[Bank / payout partners\nmocked dispatch flow]
+        Solana["USDC on Solana<br/>mocked funding flow"]
+        Partners["Bank / payout partners<br/>mocked dispatch flow"]
         Webhooks[Funding and partner webhooks]
     end
 
@@ -47,6 +48,7 @@ flowchart LR
     Ctrl --> Domain
     Domain -. target persistence model .-> Prisma
     Prisma -. future runtime connection .-> PG
+    PG --> PGState
     Domain --> Solana
     Domain --> Partners
     Webhooks --> N
@@ -89,7 +91,7 @@ sequenceDiagram
 
     User->>Web: Load workspace
     Web->>Api: bootstrap requests
-    Api->>Domain: fetch company, corridors, beneficiaries,\nbatches, payouts, exceptions, reports
+    Api->>Domain: fetch company, corridors, beneficiaries, batches, payouts, exceptions, reports
     Domain-->>Api: aggregated demo data
     Api-->>Web: initial operational state
 
