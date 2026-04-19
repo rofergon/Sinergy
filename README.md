@@ -1,3 +1,5 @@
+![Sinergy Sol](./apps/web/public/sinergy%20sol.png)
+
 # LatAm Payouts MVP
 
 Monorepo base for a global payroll payouts MVP focused on companies outside Latin America that pay contractors and distributed teams in Colombia and Mexico.
@@ -44,4 +46,3 @@ pnpm dev
 - `compliance@acme-pay.com` / `demo123`
 
 The current backend is intentionally runnable with a demo state service so the vertical slice can be exercised immediately. The Prisma schema and workspace structure are in place so repositories can be migrated from in-memory state to PostgreSQL without changing the public contracts.
-
