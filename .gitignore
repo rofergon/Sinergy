@@ -3,10 +3,32 @@ dist
 .turbo
 .cache
 coverage
+
+# Environment files
 .env
 .env.local
-.DS_Store
-pnpm-lock.yaml
+.env.localnet
+apps/api/.env
+apps/api/.env.localnet
+apps/web/.env
+
+# Local databases and generated state
 apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
+apps/api/.localnet
 
+# Logs
+*.log
+*.log.*
+.logs/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Package manager artifacts we do not use in this repo
+package-lock.json
+yarn.lock
+
+.DS_Store
+pnpm-lock.yaml
