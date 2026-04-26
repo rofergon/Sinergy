@@ -15,6 +15,7 @@ import {
   type CreateBeneficiaryDto,
   type ExceptionCase,
   type FundingInstruction,
+  type FundingStatus,
   type FundingTransaction,
   type ImportBatchDto,
   type LedgerEntry,
@@ -35,7 +36,7 @@ export class DemoDomainService {
     displayName: "Acme Payroll",
     country: "US",
     onboardingStatus: "active",
-    authorizedWallets: ["ACME-FUNDING-WALLET-001"],
+    authorizedWallets: this.getInitialAuthorizedWallets(),
     webhookUrl: "https://client.example.com/webhooks/payouts",
   };
 
@@ -316,9 +317,54 @@ export class DemoDomainService {
       payouts: this.payouts.filter((item) => item.batchId === batchId),
       quote: this.quotes.find((item) => item.batchId === batchId),
       fundingInstruction: this.fundingInstructions.find((item) => item.batchId === batchId),
+      fundingTransactions: this.fundingTransactions.filter((item) => {
+        const instruction = this.fundingInstructions.find((candidate) => candidate.id === item.fundingInstructionId);
+        return instruction?.batchId === batchId;
+      }),
       approvalDecisions: this.approvalDecisions.filter((item) => item.batchId === batchId),
       auditTrail: this.auditLogs.filter((item) => item.entityId === batchId || item.metadata?.batchId === batchId),
     };
+  }
+
+  getBatch(batchId: string): Batch {
+    return this.requireBatch(batchId);
+  }
+
+  listBatchPayouts(batchId: string): Payout[] {
+    return this.payouts.filter((item) => item.batchId === batchId);
+  }
+
+  markBatchAwaitingFunding(batchId: string): Batch {
+    const batch = this.requireBatch(batchId);
+    batch.status = "awaiting_funding";
+    this.payouts
+      .filter((item) => item.batchId === batchId && item.status !== "paid" && item.status !== "failed" && item.status !== "in_review")
+      .forEach((payout) => {
+        payout.status = "awaiting_funding";
+      });
+    return batch;
+  }
+
+  applyFundingStatus(batchId: string, status: FundingStatus): Batch {
+    const batch = this.requireBatch(batchId);
+
+    if (status === "reconciled") {
+      batch.status = "funded";
+      this.payouts
+        .filter((item) => item.batchId === batchId && item.status !== "paid" && item.status !== "failed" && item.status !== "in_review")
+        .forEach((payout) => {
+          payout.status = "funded";
+        });
+      return batch;
+    }
+
+    batch.status = "awaiting_funding";
+    this.payouts
+      .filter((item) => item.batchId === batchId && item.status !== "paid" && item.status !== "failed" && item.status !== "in_review")
+      .forEach((payout) => {
+        payout.status = "awaiting_funding";
+      });
+    return batch;
   }
 
   createQuote(user: SessionUser, batchId: string): Quote {
@@ -427,8 +473,13 @@ export class DemoDomainService {
       id: randomUUID(),
       batchId,
       chain: "solana",
+      cluster: "devnet",
       asset: "USDC",
       walletAddress: `SOLANA-${batchId.slice(0, 8)}`,
+      recipientAddress: `SOLANA-${batchId.slice(0, 8)}`,
+      recipientTokenAccount: `SOLANA-ATA-${batchId.slice(0, 8)}`,
+      tokenMint: "USDC-DEVNET-MINT",
+      reference: randomUUID(),
       expectedAmount: batch.totalFundingUsdc,
       memo: batch.id.slice(0, 10),
       status: "pending",
@@ -464,8 +515,14 @@ export class DemoDomainService {
       id: randomUUID(),
       fundingInstructionId: instruction.id,
       txHash: payload.txHash,
+      signature: payload.txHash,
       amountReceived: payload.amountReceived,
       status,
+      fromAddress: this.company.authorizedWallets[0],
+      toAddress: instruction.recipientTokenAccount,
+      rawAmount: Math.round(payload.amountReceived * 10 ** 6).toString(),
+      reconciledAmount: status === "reconciled" ? payload.amountReceived : 0,
+      detectionSource: payload.eventId ? "webhook" : "manual",
       createdAt: new Date().toISOString(),
     };
 
@@ -838,6 +895,15 @@ export class DemoDomainService {
   private stripPassword(user: DemoUserRecord): SessionUser {
     const { password: _password, ...safeUser } = user;
     return safeUser;
+  }
+
+  private getInitialAuthorizedWallets(): string[] {
+    const configuredWallets = process.env.DEFAULT_AUTHORIZED_WALLETS
+      ?.split(",")
+      .map((wallet) => wallet.trim())
+      .filter(Boolean);
+
+    return configuredWallets?.length ? configuredWallets : ["ACME-FUNDING-WALLET-001"];
   }
 
   private seedDemoBatch(): void {
