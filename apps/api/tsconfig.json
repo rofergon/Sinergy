@@ -3,10 +3,14 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "rootDir": "src",
     "outDir": "dist",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": false,
+    "typeRoots": [
+      "../../node_modules/.pnpm/@types+node@22.19.17/node_modules/@types"
+    ],
     "types": [
       "node"
     ]
