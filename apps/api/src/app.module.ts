@@ -14,6 +14,13 @@ import { WebhooksController } from "./webhooks/webhooks.controller.js";
 import { DemoDomainService } from "./demo/demo-domain.service.js";
 import { DemoAuthGuard, RolesGuard } from "./common/auth.js";
 import { ComplianceController } from "./compliance/compliance.controller.js";
+import { PrismaService } from "./prisma/prisma.service.js";
+import { FundingPersistenceService } from "./funding/funding.persistence.service.js";
+import { MemoryFundingPersistenceService } from "./funding/memory-funding.persistence.service.js";
+import { SolanaFundingGateway } from "./funding/solana-funding.gateway.js";
+import { FundingService } from "./funding/funding.service.js";
+
+const useMemoryFundingPersistence = process.env.FUNDING_PERSISTENCE_MODE === "memory";
 
 @Module({
   imports: [],
@@ -33,6 +40,15 @@ import { ComplianceController } from "./compliance/compliance.controller.js";
   ],
   providers: [
     DemoDomainService,
+    PrismaService,
+    useMemoryFundingPersistence
+      ? {
+          provide: FundingPersistenceService,
+          useClass: MemoryFundingPersistenceService,
+        }
+      : FundingPersistenceService,
+    SolanaFundingGateway,
+    FundingService,
     Reflector,
     {
       provide: APP_GUARD,
