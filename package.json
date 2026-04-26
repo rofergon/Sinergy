@@ -5,6 +5,8 @@
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "dev": "pnpm --parallel --filter @latam-payouts/api --filter @latam-payouts/web dev",
+    "stack:start": "bash ./scripts/start-stack.sh",
+    "stack:restart": "bash ./scripts/restart-stack.sh",
     "localnet:validator": "solana-test-validator --ledger apps/api/.localnet/ledger --reset",
     "localnet:setup": "pnpm --filter @latam-payouts/api localnet:setup",
     "localnet:dbpush": "pnpm --filter @latam-payouts/api prisma:push:localnet",
