@@ -8,13 +8,6 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@latam-payouts/contracts": [
-        "packages/contracts/src"
-      ]
-    }
+    "resolveJsonModule": true
   }
 }
-
