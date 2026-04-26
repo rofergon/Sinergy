@@ -2,7 +2,8 @@
 
 # LatAm Payouts MVP
 
-Monorepo base for a global payroll payouts MVP focused on companies outside Latin America that pay contractors and distributed teams in Colombia and Mexico.
+Monorepo base for a global payroll payouts MVP focused on companies outside Latin America that pay contractors and distributed teams in Latam
+.
 
 ## Stack
 
@@ -26,6 +27,18 @@ Monorepo base for a global payroll payouts MVP focused on companies outside Lati
 
 ```bash
 docker compose up -d
+```
+
+If you are running without Docker in WSL and installed PostgreSQL directly, you can use the helper scripts instead:
+
+```bash
+pnpm stack:start
+```
+
+To restart PostgreSQL, re-apply the Prisma schema, and boot the workspace again:
+
+```bash
+pnpm stack:restart
 ```
 
 4. Install dependencies:
