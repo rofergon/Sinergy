@@ -2,11 +2,17 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/co
 import { DemoDomainService } from "../demo/demo-domain.service.js";
 import { CurrentUser, DemoAuthGuard, Roles, RolesGuard } from "../common/auth.js";
 import type { CreateBatchDto, ImportBatchDto, SessionUser } from "@latam-payouts/contracts";
+import { FundingPersistenceService } from "../funding/funding.persistence.service.js";
+import { FundingService } from "../funding/funding.service.js";
 
 @Controller("batches")
 @UseGuards(DemoAuthGuard, RolesGuard)
 export class BatchesController {
-  constructor(private readonly domain: DemoDomainService) {}
+  constructor(
+    private readonly domain: DemoDomainService,
+    private readonly funding: FundingService,
+    private readonly fundingPersistence: FundingPersistenceService,
+  ) {}
 
   @Get()
   list() {
@@ -26,8 +32,19 @@ export class BatchesController {
   }
 
   @Get(":id")
-  getById(@Param("id") id: string) {
-    return this.domain.getBatchDetail(id);
+  async getById(@Param("id") id: string) {
+    const detail = this.domain.getBatchDetail(id);
+    const fundingView = await this.funding.getFundingView(id);
+    const persistedAuditTrail = await this.fundingPersistence.listAuditLogs({ entityId: id });
+
+    return {
+      ...detail,
+      fundingInstruction: fundingView.instruction,
+      fundingTransactions: fundingView.transactions,
+      auditTrail: [...detail.auditTrail, ...persistedAuditTrail].sort((left, right) =>
+        right.createdAt.localeCompare(left.createdAt),
+      ),
+    };
   }
 
   @Post(":id/quote")
@@ -51,7 +68,7 @@ export class BatchesController {
   @Get(":id/funding-instructions")
   @Roles("admin", "finance_operator", "approver")
   fundingInstructions(@CurrentUser() user: SessionUser, @Param("id") id: string) {
-    return this.domain.getFundingInstruction(user, id);
+    return this.funding.ensureFundingInstruction(user, id);
   }
 
   @Patch("compliance/:caseId/resolve")
@@ -60,4 +77,3 @@ export class BatchesController {
     return this.domain.resolveComplianceCase(user, caseId);
   }
 }
-
