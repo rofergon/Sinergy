@@ -77,11 +77,11 @@ label {
 }
 
 .login-card {
-  width: min(560px, 100%);
+  width: min(1180px, 100%);
   border-radius: 28px;
   padding: 2rem;
   display: grid;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .eyebrow {
@@ -96,6 +96,78 @@ label {
 .helper,
 .sidebar-copy {
   color: #546579;
+}
+
+.login-hero {
+  grid-template-columns: minmax(0, 460px) minmax(320px, 1fr);
+  align-items: stretch;
+}
+
+.login-copy {
+  display: grid;
+  gap: 1.5rem;
+  align-content: center;
+  min-width: 0;
+}
+
+.brand-lockup {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.brand-logo {
+  width: min(100%, 320px);
+  max-height: 120px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.hero-copy h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 3vw, 3.4rem);
+  line-height: 1;
+}
+
+.hero-copy .lede {
+  margin: 0.9rem 0 0;
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.login-form-shell {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(19, 32, 47, 0.08);
+}
+
+.login-visual {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner-frame {
+  width: 100%;
+  min-height: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    linear-gradient(160deg, rgba(255, 237, 208, 0.95), rgba(247, 242, 232, 0.4)),
+    radial-gradient(circle at top right, rgba(255, 205, 124, 0.32), transparent 38%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.hero-banner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+  object-fit: cover;
+  object-position: center;
 }
 
 .primary {
@@ -123,8 +195,20 @@ label {
   justify-content: space-between;
 }
 
-.sidebar h2 {
-  margin: 0.25rem 0 0;
+.sidebar-brand {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-logo {
+  display: block;
+  width: 100%;
+  max-width: 180px;
+  max-height: 84px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .role {
@@ -348,6 +432,46 @@ td {
 
   .sidebar {
     padding-bottom: 1rem;
+  }
+
+  .login-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .login-visual {
+    order: 2;
+  }
+
+  .hero-banner {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 720px) {
+  .login-shell,
+  .main-panel {
+    padding: 1.25rem;
+  }
+
+  .login-card {
+    padding: 1.25rem;
+  }
+
+  .brand-logo {
+    width: min(100%, 240px);
+    max-height: 92px;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(1.9rem, 9vw, 2.6rem);
+  }
+
+  .login-form-shell {
+    padding: 1rem;
+  }
+
+  .hero-banner {
+    min-height: 220px;
   }
 }
 

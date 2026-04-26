@@ -75,6 +75,9 @@ export const api = {
     recordFunding(token, body) {
         return request("/funding/transactions", { token, method: "POST", body });
     },
+    rescanFundingInstruction(token, fundingInstructionId) {
+        return request(`/funding/instructions/${fundingInstructionId}/rescan`, { token, method: "POST" });
+    },
     listPayouts(token) {
         return request("/payouts", { token });
     },

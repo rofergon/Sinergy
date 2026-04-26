@@ -128,30 +128,46 @@ export default function App() {
   if (!session) {
     return (
       <div className="login-shell">
-        <section className="login-card">
-          <p className="eyebrow">Global Payroll Payouts</p>
-          <h1>LatAm payout operations console</h1>
-          <p className="lede">
-            Run beneficiary onboarding, batch approvals, USDC funding, payout tracking, and exception handling from one
-            place.
-          </p>
-          <label>
-            Email
-            <input value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              value={loginForm.password}
-              onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })}
-            />
-          </label>
-          <button className="primary" onClick={() => void handleLogin()} disabled={loading}>
-            {loading ? "Signing in..." : "Enter workspace"}
-          </button>
-          <p className="helper">Demo users: finance, approver, compliance. Password: demo123</p>
-          {message ? <p className="message">{message}</p> : null}
+        <section className="login-card login-hero">
+          <div className="login-copy">
+            <div className="brand-lockup">
+              <img className="brand-logo" src="/Logoname.png" alt="Sinergy Sol" />
+              <p className="eyebrow">Global Payroll Payouts</p>
+            </div>
+            <div className="hero-copy">
+              <h1>LatAm payout operations console</h1>
+              <p className="lede">
+                Run beneficiary onboarding, batch approvals, USDC funding, payout tracking, and exception handling from one
+                place.
+              </p>
+            </div>
+
+            <div className="login-form-shell">
+              <label>
+                Email
+                <input value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
+              </label>
+              <label>
+                Password
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })}
+                />
+              </label>
+              <button className="primary" onClick={() => void handleLogin()} disabled={loading}>
+                {loading ? "Signing in..." : "Enter workspace"}
+              </button>
+              <p className="helper">Demo users: finance, approver, compliance. Password: demo123</p>
+              {message ? <p className="message">{message}</p> : null}
+            </div>
+          </div>
+
+          <aside className="login-visual" aria-hidden="true">
+            <div className="banner-frame">
+              <img className="hero-banner" src="/banner.png" alt="" />
+            </div>
+          </aside>
         </section>
       </div>
     );
@@ -161,8 +177,10 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div>
+          <div className="sidebar-brand">
+            <img className="sidebar-logo" src="/Logoname.png" alt="Sinergy Sol" />
+          </div>
           <p className="eyebrow">Ops Core</p>
-          <h2>LatAm Payouts</h2>
           <p className="sidebar-copy">{session.user.name}</p>
           <p className="sidebar-copy role">{session.user.role.replaceAll("_", " ")}</p>
         </div>
@@ -286,12 +304,24 @@ export default function App() {
                     "Funding instructions generated.",
                   )
                 }
-                onFunding={(instructionId, amount) =>
+                onRefreshFunding={(instructionId) =>
+                  runAction(
+                    async () => {
+                      await api.rescanFundingInstruction(session.accessToken, instructionId);
+                      if (selectedBatch) {
+                        const detail = await api.getBatch(session.accessToken, selectedBatch.batch.id);
+                        setSelectedBatch(detail);
+                      }
+                    },
+                    "Funding status refreshed.",
+                  )
+                }
+                onRecordFallbackFunding={(instructionId, amount) =>
                   runAction(
                     async () => {
                       await api.recordFunding(session.accessToken, {
                         fundingInstructionId: instructionId,
-                        txHash: `SOLANA-TX-${Date.now()}`,
+                        txHash: `MANUAL-FUNDING-${Date.now()}`,
                         amountReceived: amount,
                       });
                       if (selectedBatch) {
@@ -299,7 +329,7 @@ export default function App() {
                         setSelectedBatch(detail);
                       }
                     },
-                    "Funding transaction recorded.",
+                    "Manual funding fallback recorded.",
                   )
                 }
                 onDispatch={(payoutId) =>
@@ -558,7 +588,8 @@ function BatchesPage(props: {
   onQuote: (batchId: string) => void;
   onApprove: (batchId: string) => void;
   onGenerateFunding: (batchId: string) => void;
-  onFunding: (instructionId: string, amount: number) => void;
+  onRefreshFunding: (instructionId: string) => void;
+  onRecordFallbackFunding: (instructionId: string, amount: number) => void;
   onDispatch: (payoutId: string) => void;
 }) {
   const {
@@ -574,7 +605,8 @@ function BatchesPage(props: {
     onQuote,
     onApprove,
     onGenerateFunding,
-    onFunding,
+    onRefreshFunding,
+    onRecordFallbackFunding,
     onDispatch,
   } = props;
   const beneficiaries = data?.beneficiaries ?? [];
@@ -724,16 +756,49 @@ function BatchesPage(props: {
                 <h3>Funding dashboard</h3>
                 {selectedBatch.fundingInstruction ? (
                   <>
-                    <p>Wallet: {selectedBatch.fundingInstruction.walletAddress}</p>
+                    <p>Network: {selectedBatch.fundingInstruction.cluster}</p>
+                    <p>Treasury wallet: {selectedBatch.fundingInstruction.recipientAddress}</p>
+                    <p>Token account: {selectedBatch.fundingInstruction.recipientTokenAccount}</p>
+                    <p>Token mint: {selectedBatch.fundingInstruction.tokenMint}</p>
+                    <p>Reference: {selectedBatch.fundingInstruction.reference}</p>
+                    {selectedBatch.fundingInstruction.memo ? <p>Memo: {selectedBatch.fundingInstruction.memo}</p> : null}
                     <p>Expected amount: {selectedBatch.fundingInstruction.expectedAmount.toFixed(2)} USDC</p>
-                    <button
-                      className="primary"
-                      onClick={() =>
-                        onFunding(selectedBatch.fundingInstruction!.id, selectedBatch.fundingInstruction!.expectedAmount)
-                      }
-                    >
-                      Register full funding
-                    </button>
+                    <p>Status: {selectedBatch.fundingInstruction.status}</p>
+                    {selectedBatch.fundingInstruction.lastScanAt ? (
+                      <p>Last scan: {new Date(selectedBatch.fundingInstruction.lastScanAt).toLocaleString()}</p>
+                    ) : null}
+                    {selectedBatch.fundingInstruction.latestSignature ? (
+                      <p>Latest signature: {selectedBatch.fundingInstruction.latestSignature}</p>
+                    ) : null}
+                    <div className="inline-actions">
+                      <button className="primary" onClick={() => onRefreshFunding(selectedBatch.fundingInstruction!.id)}>
+                        Refresh funding status
+                      </button>
+                      <button
+                        className="ghost"
+                        onClick={() =>
+                          onRecordFallbackFunding(
+                            selectedBatch.fundingInstruction!.id,
+                            selectedBatch.fundingInstruction!.expectedAmount,
+                          )
+                        }
+                      >
+                        Register manual fallback
+                      </button>
+                    </div>
+                    {selectedBatch.fundingTransactions.length ? (
+                      <div className="audit-list">
+                        {selectedBatch.fundingTransactions.map((transaction) => (
+                          <div key={transaction.id} className="audit-item">
+                            <strong>{transaction.signature}</strong>
+                            <span>
+                              {transaction.amountReceived.toFixed(2)} USDC via {transaction.detectionSource}
+                            </span>
+                            <time>{new Date(transaction.createdAt).toLocaleString()}</time>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <p>Generate funding instructions after approval.</p>

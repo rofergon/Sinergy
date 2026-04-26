@@ -1,9 +1,13 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { DemoDomainService } from "../demo/demo-domain.service.js";
+import { FundingService } from "../funding/funding.service.js";
 
 @Controller("webhooks")
 export class WebhooksController {
-  constructor(private readonly domain: DemoDomainService) {}
+  constructor(
+    private readonly domain: DemoDomainService,
+    private readonly fundingService: FundingService,
+  ) {}
 
   @Post("partner")
   partner(@Body() body: { eventId: string; payoutId: string; status: "paid" | "failed" }) {
@@ -12,7 +16,6 @@ export class WebhooksController {
 
   @Post("funding")
   funding(@Body() body: { fundingInstructionId: string; txHash: string; amountReceived: number; eventId: string }) {
-    return this.domain.recordFundingTransaction(this.domain.getDefaultUser(), body);
+    return this.fundingService.recordManualFunding(this.domain.getDefaultUser(), body, "webhook");
   }
 }
-

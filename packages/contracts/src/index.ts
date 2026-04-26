@@ -32,14 +32,21 @@ export type PayoutStatus =
 export type ExceptionType =
   | "quote_expired"
   | "funding_incomplete"
+  | "funding_wallet_unauthorized"
+  | "funding_invalid_mint"
+  | "funding_invalid_destination"
+  | "funding_reference_missing"
   | "payout_failed"
   | "callback_inconsistent"
   | "manual_review";
 export type BeneficiaryKind = "contractor" | "employee";
 export type FundingStatus = "pending" | "reconciled" | "partial";
+export type FundingCluster = "devnet" | "testnet" | "localnet" | "mainnet-beta";
+export type FundingDetectionSource = "rpc" | "manual" | "webhook";
 export type LedgerEntryType =
   | "funding_received"
   | "funding_reserved"
+  | "funding_surplus"
   | "fee_reserved"
   | "payout_dispatched"
   | "payout_settled"
@@ -140,19 +147,35 @@ export interface FundingInstruction {
   id: string;
   batchId: string;
   chain: "solana";
+  cluster: FundingCluster;
   asset: "USDC";
   walletAddress: string;
+  recipientAddress: string;
+  recipientTokenAccount: string;
+  tokenMint: string;
+  reference: string;
   expectedAmount: number;
   memo?: string;
   status: FundingStatus;
+  expiresAt?: string;
+  lastScanAt?: string;
+  latestSignature?: string;
 }
 
 export interface FundingTransaction {
   id: string;
   fundingInstructionId: string;
   txHash: string;
+  signature: string;
   amountReceived: number;
   status: FundingStatus;
+  fromAddress?: string;
+  toAddress: string;
+  rawAmount: string;
+  reconciledAmount: number;
+  slot?: number;
+  confirmedAt?: string;
+  detectionSource: FundingDetectionSource;
   createdAt: string;
 }
 
@@ -227,6 +250,7 @@ export interface BatchDetail {
   payouts: Payout[];
   quote?: Quote;
   fundingInstruction?: FundingInstruction;
+  fundingTransactions: FundingTransaction[];
   approvalDecisions: ApprovalDecision[];
   auditTrail: AuditLog[];
 }

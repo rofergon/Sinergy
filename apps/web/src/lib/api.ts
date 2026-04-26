@@ -112,6 +112,9 @@ export const api = {
   recordFunding(token: string, body: { fundingInstructionId: string; txHash: string; amountReceived: number }) {
     return request<FundingTransaction>("/funding/transactions", { token, method: "POST", body });
   },
+  rescanFundingInstruction(token: string, fundingInstructionId: string) {
+    return request<FundingInstruction>(`/funding/instructions/${fundingInstructionId}/rescan`, { token, method: "POST" });
+  },
   listPayouts(token: string) {
     return request<Payout[]>("/payouts", { token });
   },
@@ -156,4 +159,3 @@ export const api = {
 };
 
 export type { ApprovalDecision, AuditLog, Batch, BatchDetail, BatchReportRow, Beneficiary, Company, ComplianceCase, Corridor, ExceptionCase, FundingInstruction, Payout };
-
