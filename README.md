@@ -21,23 +21,94 @@ Monorepo base for a global payroll payouts MVP focused on companies outside Lati
 ## Getting started
 
 1. Install `pnpm` if it is not already available.
-2. Start Postgres if you want to wire Prisma next:
+2. Create a local `.env` from `.env.example` and fill in the Solana treasury wallet and USDC mint for Devnet.
+3. Start Postgres:
 
 ```bash
 docker compose up -d
 ```
 
-3. Install dependencies:
+4. Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-4. Run the workspace:
+5. Push the Prisma schema for the funding persistence layer:
+
+```bash
+pnpm --filter @latam-payouts/api prisma:push
+```
+
+6. Run the workspace:
 
 ```bash
 pnpm dev
 ```
+
+## Onchain funding setup
+
+The MVP now includes a real `funding + reconciliation` layer for `USDC on Solana Devnet`.
+
+- `GET /batches/:id/funding-instructions` generates a persistent funding instruction with treasury wallet, treasury ATA, mint, reference, memo, and expected amount.
+- The API polls Solana for transfers that include the batch `reference` and reconcile accepted deposits into the batch state.
+- `POST /funding/instructions/:id/rescan` lets ops manually trigger a reconciliation pass.
+- `POST /funding/transactions` remains available as a manual fallback for demos and support flows.
+
+## Localnet-first workflow
+
+You can develop the funding flow against a local Solana validator and avoid faucet limits.
+
+1. Start the local validator in one terminal:
+
+```bash
+pnpm localnet:validator
+```
+
+2. Bootstrap the local USDC mint, treasury wallet, and authorized company wallet in another terminal:
+
+```bash
+pnpm localnet:setup
+```
+
+This generates:
+
+- `apps/api/.localnet/keys/*.json` keypairs for payer, treasury, and company
+- `apps/api/.env.localnet` with localnet RPC, mint, treasury wallet, and authorized wallet values
+
+3. Optional: if you want to exercise the Prisma-backed persistence path instead of the default in-memory localnet mode, push the Prisma schema using the localnet env:
+
+```bash
+pnpm localnet:dbpush
+```
+
+4. Run the API with localnet env values loaded:
+
+```bash
+pnpm --filter @latam-payouts/api dev:localnet
+```
+
+5. Run the web app in a separate terminal:
+
+```bash
+pnpm --filter @latam-payouts/web dev
+```
+
+6. Run an end-to-end smoke test once the API is up:
+
+```bash
+pnpm localnet:smoke
+```
+
+The smoke test logs in, creates a batch, quotes and approves it, generates funding instructions, sends local USDC with the onchain `reference`, triggers a rescan, and verifies the batch reaches `funded`.
+
+If you want one command that starts the API with localnet env values and runs the smoke flow in the same WSL session, use:
+
+```bash
+pnpm localnet:e2e
+```
+
+The localnet workflow defaults to `FUNDING_PERSISTENCE_MODE=memory`, so you can run the funding E2E without Docker or Postgres.
 
 ## Demo credentials
 
