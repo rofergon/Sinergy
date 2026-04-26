@@ -5,9 +5,13 @@
   "packageManager": "pnpm@9.12.3",
   "scripts": {
     "dev": "pnpm --parallel --filter @latam-payouts/api --filter @latam-payouts/web dev",
+    "localnet:validator": "solana-test-validator --ledger apps/api/.localnet/ledger --reset",
+    "localnet:setup": "pnpm --filter @latam-payouts/api localnet:setup",
+    "localnet:dbpush": "pnpm --filter @latam-payouts/api prisma:push:localnet",
+    "localnet:smoke": "pnpm --filter @latam-payouts/api localnet:smoke",
+    "localnet:e2e": "pnpm --filter @latam-payouts/api localnet:e2e",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   }
 }
-
