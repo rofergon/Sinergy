@@ -5,10 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "nest start --watch",
+    "dev:localnet": "node ./scripts/run-with-env.mjs .env .env.localnet -- pnpm exec nest start --watch",
     "build": "nest build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:push:localnet": "node ./scripts/run-with-env.mjs .env .env.localnet -- pnpm exec prisma db push",
+    "localnet:setup": "node ./scripts/setup-localnet.mjs",
+    "localnet:smoke": "node ./scripts/smoke-localnet.mjs",
+    "localnet:e2e": "bash ./scripts/run-localnet-smoke.sh",
+    "test": "vitest run"
   },
   "dependencies": {
     "@latam-payouts/contracts": "workspace:*",
@@ -17,16 +24,19 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@prisma/client": "^5.22.0",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@types/node": "^22.10.1",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
+    "@types/node": "^22.10.1",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^1.6.1"
   }
 }
