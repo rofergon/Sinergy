@@ -43,7 +43,7 @@ export function useOperationsActions({
       void runAction(() => api.createBeneficiary(session!.accessToken, form).then(() => Promise.resolve()), "Beneficiary created.");
     },
     updateBeneficiary(id: string, form: Partial<CreateBeneficiaryDto>) {
-      void runAction(() => api.updateBeneficiary(session!.accessToken, id, form).then(() => Promise.resolve()), "Person updated.");
+      void runAction(() => api.updateBeneficiary(session!.accessToken, id, form).then(() => Promise.resolve()), "Beneficiary updated.");
     },
     createBatch(form: CreateBatchDto) {
       void runAction(async () => {

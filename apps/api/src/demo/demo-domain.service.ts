@@ -82,7 +82,7 @@ export class DemoDomainService {
       currency: "COP",
       payoutMethod: "bank_transfer",
       quoteTtlMinutes: 20,
-      requiredFields: ["bankName", "accountNumber", "accountType", "documentNumber"],
+      requiredFields: ["bankName", "accountHolderName", "phoneNumber", "accountNumber", "accountType", "documentType", "documentNumber"],
       limits: { minLocal: 50000, maxLocal: 25000000 },
     },
     {
@@ -90,8 +90,16 @@ export class DemoDomainService {
       currency: "MXN",
       payoutMethod: "bank_transfer",
       quoteTtlMinutes: 20,
-      requiredFields: ["bankName", "clabe"],
+      requiredFields: ["bankName", "accountHolderName", "bankKey"],
       limits: { minLocal: 500, maxLocal: 350000 },
+    },
+    {
+      code: "AR",
+      currency: "ARS",
+      payoutMethod: "bank_transfer",
+      quoteTtlMinutes: 20,
+      requiredFields: ["bankName", "accountHolderName", "bankKey", "bankKeyType", "documentType", "documentNumber"],
+      limits: { minLocal: 2500, maxLocal: 4500000 },
     },
   ];
 
@@ -101,13 +109,17 @@ export class DemoDomainService {
       companyId: "company_acme",
       name: "Camila Rojas",
       email: "camila@example.co",
+      projectId: "batch_co_payroll_q2",
+      projectName: "Payroll Colombia Q2",
       country: "CO",
       currency: "COP",
       kind: "contractor",
       bankName: "Bancolombia",
       accountHolderName: "Camila Rojas",
+      phoneNumber: "+573001112233",
       accountNumber: "1029384756",
       accountType: "savings",
+      documentType: "CC",
       documentNumber: "1032456789",
       validationStatus: "valid",
       createdAt: new Date().toISOString(),
@@ -117,18 +129,75 @@ export class DemoDomainService {
       companyId: "company_acme",
       name: "Luis Herrera",
       email: "luis@example.mx",
+      projectId: "batch_mx_ops_apr",
+      projectName: "Operaciones Mexico Abril",
       country: "MX",
       currency: "MXN",
       kind: "contractor",
       bankName: "BBVA Mexico",
       accountHolderName: "Luis Herrera",
+      bankKey: "012345678901234567",
+      bankKeyType: "CLABE",
       clabe: "012345678901234567",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "ben_ar_001",
+      companyId: "company_acme",
+      name: "Sofia Alvarez",
+      email: "sofia@example.ar",
+      projectId: "batch_ar_talent_may",
+      projectName: "Talent Argentina Mayo",
+      country: "AR",
+      currency: "ARS",
+      kind: "contractor",
+      bankName: "Galicia",
+      accountHolderName: "Sofia Alvarez",
+      bankKey: "2850590940090418135201",
+      bankKeyType: "CBU",
+      documentType: "CUIT",
+      documentNumber: "27-30123456-8",
       validationStatus: "valid",
       createdAt: new Date().toISOString(),
     },
   ];
 
-  private batches: Batch[] = [];
+  private batches: Batch[] = [
+    {
+      id: "batch_co_payroll_q2",
+      companyId: "company_acme",
+      name: "Payroll Colombia Q2",
+      createdByUserId: "user_finance",
+      status: "draft",
+      payoutIds: [],
+      totalLocal: 0,
+      totalFundingUsdc: 0,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "batch_mx_ops_apr",
+      companyId: "company_acme",
+      name: "Operaciones Mexico Abril",
+      createdByUserId: "user_finance",
+      status: "draft",
+      payoutIds: [],
+      totalLocal: 0,
+      totalFundingUsdc: 0,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "batch_ar_talent_may",
+      companyId: "company_acme",
+      name: "Talent Argentina Mayo",
+      createdByUserId: "user_finance",
+      status: "draft",
+      payoutIds: [],
+      totalLocal: 0,
+      totalFundingUsdc: 0,
+      createdAt: new Date().toISOString(),
+    },
+  ];
   private payouts: Payout[] = [];
   private quotes: Quote[] = [];
   private fundingInstructions: FundingInstruction[] = [];
@@ -214,7 +283,7 @@ export class DemoDomainService {
   }
 
   createBeneficiary(user: SessionUser, dto: CreateBeneficiaryDto): Beneficiary {
-    const currency = dto.country === "CO" ? "COP" : "MXN";
+    const currency = dto.country === "CO" ? "COP" : dto.country === "MX" ? "MXN" : "ARS";
     const validationErrors = this.validateBeneficiaryFields(dto.country, dto);
 
     const beneficiary: Beneficiary = {
@@ -222,14 +291,20 @@ export class DemoDomainService {
       companyId: user.companyId,
       name: dto.name,
       email: dto.email,
+      projectId: dto.projectId,
+      projectName: dto.projectName,
       country: dto.country,
       currency,
       kind: dto.kind,
       bankName: dto.bankName,
       accountHolderName: dto.accountHolderName,
+      phoneNumber: dto.phoneNumber,
       accountNumber: dto.accountNumber,
       accountType: dto.accountType,
-      clabe: dto.clabe,
+      bankKey: dto.bankKey,
+      bankKeyType: dto.bankKeyType,
+      clabe: dto.country === "MX" ? dto.bankKey ?? dto.clabe : dto.clabe,
+      documentType: dto.documentType,
       documentNumber: dto.documentNumber,
       validationStatus: validationErrors.length ? "invalid" : "valid",
       createdAt: new Date().toISOString(),
@@ -243,6 +318,9 @@ export class DemoDomainService {
   updateBeneficiary(user: SessionUser, id: string, dto: Partial<CreateBeneficiaryDto>): Beneficiary {
     const beneficiary = this.requireBeneficiary(id);
     Object.assign(beneficiary, dto);
+    if (beneficiary.country === "MX" && beneficiary.bankKey) {
+      beneficiary.clabe = beneficiary.bankKey;
+    }
     const validationErrors = this.validateBeneficiaryFields(beneficiary.country, beneficiary);
     beneficiary.validationStatus = validationErrors.length ? "invalid" : "valid";
     this.logAudit("beneficiary", beneficiary.id, "beneficiary.updated", user, { validationErrors });
@@ -272,7 +350,12 @@ export class DemoDomainService {
         fundingAmountUsdc: 0,
         status: validationErrors.length ? "draft" : "validated",
         approvalStatus: "pending",
-        partnerRoute: beneficiary.country === "CO" ? "mock-colombia-bank" : "mock-mexico-bank",
+        partnerRoute:
+          beneficiary.country === "CO"
+            ? "mock-colombia-bank"
+            : beneficiary.country === "MX"
+              ? "mock-mexico-bank"
+              : "mock-argentina-bank",
         validationErrors,
       };
     });

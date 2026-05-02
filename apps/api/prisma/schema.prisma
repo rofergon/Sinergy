@@ -48,14 +48,20 @@ model Beneficiary {
   companyId         String
   name              String
   email             String
+  projectId         String?
+  projectName       String?
   country           String
   currency          String
   kind              String
   bankName          String
   accountHolderName String
+  phoneNumber       String?
   accountNumber     String?
   accountType       String?
+  bankKey           String?
+  bankKeyType       String?
   clabe             String?
+  documentType      String?
   documentNumber    String?
   validationStatus  String
   company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)

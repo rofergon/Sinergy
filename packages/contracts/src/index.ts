@@ -1,5 +1,5 @@
-export type CountryCode = "CO" | "MX";
-export type CurrencyCode = "COP" | "MXN" | "USDC";
+export type CountryCode = "CO" | "MX" | "AR";
+export type CurrencyCode = "COP" | "MXN" | "ARS" | "USDC";
 export type UserRole =
   | "admin"
   | "finance_operator"
@@ -88,6 +88,8 @@ export interface Beneficiary {
   companyId: string;
   name: string;
   email: string;
+  projectId?: string;
+  projectName?: string;
   country: CountryCode;
   currency: CurrencyCode;
   kind: BeneficiaryKind;
@@ -95,7 +97,11 @@ export interface Beneficiary {
   accountHolderName: string;
   accountNumber?: string;
   accountType?: string;
+  bankKey?: string;
+  bankKeyType?: string;
   clabe?: string;
+  phoneNumber?: string;
+  documentType?: string;
   documentNumber?: string;
   validationStatus: "valid" | "invalid";
   createdAt: string;
@@ -280,13 +286,19 @@ export interface AuthResponse {
 export interface CreateBeneficiaryDto {
   name: string;
   email: string;
+  projectId?: string;
+  projectName?: string;
   country: CountryCode;
   kind: BeneficiaryKind;
   bankName: string;
   accountHolderName: string;
   accountNumber?: string;
   accountType?: string;
+  bankKey?: string;
+  bankKeyType?: string;
   clabe?: string;
+  phoneNumber?: string;
+  documentType?: string;
   documentNumber?: string;
 }
 

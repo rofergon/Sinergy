@@ -47,8 +47,8 @@ export function AppLayout({ children, loading, message, session, onLogout }: App
       <main className="main-panel">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Workspace operativo</p>
-            <h1>Proyectos fondeados para pagar talento en Colombia y Mexico</h1>
+            <p className="eyebrow">Operations Workspace</p>
+            <h1>Funded projects to pay talent in Colombia and Mexico</h1>
           </div>
           <div className="status-box">
             <span className="dot live" />

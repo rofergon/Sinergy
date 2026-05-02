@@ -44,37 +44,37 @@ export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
 
   const metricCards: Array<{ label: string; value: string; detail: string; tone: MetricTone; icon: string }> = [
     {
-      label: "Proyectos activos",
+      label: "Active projects",
       value: activeProjects.length.toString(),
-      detail: `${batches.length} proyectos totales`,
+      detail: `${batches.length} total projects`,
       tone: "blue",
       icon: "document",
     },
     {
-      label: "Fondeo requerido",
+      label: "Funding required",
       value: formatUsdc(totalFundingRequired),
-      detail: `${formatUsdc(fundedAmount)} fondeado`,
+      detail: `${formatUsdc(fundedAmount)} funded`,
       tone: "green",
       icon: "wallet",
     },
     {
-      label: "Personas por aprobar",
+      label: "People awaiting approval",
       value: pendingApproval.toString(),
-      detail: `${approvedPayouts.length} aprobadas para pago`,
+      detail: `${approvedPayouts.length} approved for payment`,
       tone: "amber",
       icon: "alert",
     },
     {
-      label: "Pagos en curso",
+      label: "Payments in progress",
       value: payablePayouts.length.toString(),
-      detail: "fondeados o enviándose",
+      detail: "funded or dispatching",
       tone: "blue",
       icon: "volume",
     },
     {
-      label: "Pagos fallidos",
+      label: "Failed payments",
       value: failedPayouts.length.toString(),
-      detail: `${paidPayouts.length} pagados correctamente`,
+      detail: `${paidPayouts.length} paid successfully`,
       tone: failedPayouts.length ? "red" : "green",
       icon: "shield",
     },
@@ -99,20 +99,20 @@ export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
 
       <article className="panel ops-panel">
         <div className="panel-title-row">
-          <h2>Monitoreo por proyecto</h2>
-          <span className="helper">Fondeo, aprobaciones y pagos actuales</span>
+          <h2>Project monitoring</h2>
+          <span className="helper">Current funding, approvals, and payment activity</span>
         </div>
         <div className="table-shell">
           <table className="ops-table project-monitor-table">
             <thead>
               <tr>
-                <th>Proyecto</th>
-                <th>Estado</th>
-                <th>Personas</th>
-                <th>Aprobadas</th>
-                <th>Pagadas</th>
-                <th>Fallidas</th>
-                <th>Fondeo</th>
+                <th>Project</th>
+                <th>Status</th>
+                <th>People</th>
+                <th>Approved</th>
+                <th>Paid</th>
+                <th>Failed</th>
+                <th>Funding</th>
               </tr>
             </thead>
             <tbody>
@@ -125,7 +125,7 @@ export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
                   <tr key={batch.id}>
                     <td>
                       <strong>{batch.name}</strong>
-                      <span className="cell-subtext">Creado {new Date(batch.createdAt).toLocaleDateString()}</span>
+                      <span className="cell-subtext">Created {new Date(batch.createdAt).toLocaleDateString()}</span>
                     </td>
                     <td>
                       <span className={`pill ${statusTone(batch.status) === "red" ? "danger" : statusTone(batch.status) === "green" ? "success" : "warning"}`}>

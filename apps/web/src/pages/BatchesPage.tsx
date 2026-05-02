@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { CreateBatchDto, CreateBeneficiaryDto, Payout, UpdatePayoutDto } from "@latam-payouts/contracts";
+import { BeneficiaryFormFields, applyBeneficiaryCountryDefaults, beneficiaryCountryOptions } from "../components/forms/BeneficiaryFormFields";
 import type { BatchDetail, Beneficiary, BootstrapPayload } from "../lib/api";
 
 type BatchesPageProps = {
@@ -40,13 +41,19 @@ function getPersonForm(beneficiary: Beneficiary): CreateBeneficiaryDto {
   return {
     name: beneficiary.name,
     email: beneficiary.email,
+    projectId: beneficiary.projectId ?? "",
+    projectName: beneficiary.projectName ?? "",
     country: beneficiary.country,
     kind: beneficiary.kind,
     bankName: beneficiary.bankName,
     accountHolderName: beneficiary.accountHolderName,
+    phoneNumber: beneficiary.phoneNumber ?? "",
     accountNumber: beneficiary.accountNumber ?? "",
     accountType: beneficiary.accountType ?? "",
-    clabe: beneficiary.clabe ?? "",
+    bankKey: beneficiary.bankKey ?? beneficiary.clabe ?? "",
+    bankKeyType: beneficiary.bankKeyType ?? (beneficiary.country === "MX" ? "CLABE" : ""),
+    clabe: beneficiary.clabe ?? beneficiary.bankKey ?? "",
+    documentType: beneficiary.documentType ?? "",
     documentNumber: beneficiary.documentNumber ?? "",
   };
 }
@@ -87,6 +94,7 @@ export function BatchesPage({
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const beneficiaries = data?.beneficiaries ?? [];
   const batches = data?.batches ?? [];
+  const projectOptions = batches.map((batch) => ({ id: batch.id, name: batch.name }));
   const selectedProjectPayouts = selectedBatch?.payouts ?? [];
   const canEditProject = selectedBatch ? editableProjectStatuses.includes(selectedBatch.batch.status) : false;
 
@@ -121,8 +129,8 @@ export function BatchesPage({
       <aside className="project-rail">
         <article className="panel ops-panel">
           <div className="panel-title-row">
-            <h2>Proyectos</h2>
-            <span className="pill neutral">{batches.length} activos</span>
+            <h2>Projects</h2>
+            <span className="pill neutral">{batches.length} active</span>
           </div>
           <div className="project-list">
             {batches.map((batch) => {
@@ -138,7 +146,7 @@ export function BatchesPage({
                   <span>
                     <strong>{batch.name}</strong>
                     <small>
-                      {approvedCount}/{projectPayouts.length} aprobadas · {paidCount} pagadas
+                      {approvedCount}/{projectPayouts.length} approved · {paidCount} paid
                     </small>
                   </span>
                   <span className="pill neutral">{humanize(batch.status)}</span>
@@ -149,15 +157,15 @@ export function BatchesPage({
         </article>
 
         <article className="panel ops-panel">
-          <h2>Crear proyecto</h2>
+          <h2>Create project</h2>
           <label>
-            Nombre del proyecto
+            Project name
             <input value={batchForm.name} onChange={(event) => setBatchForm({ ...batchForm, name: event.target.value })} />
           </label>
           <label>
-            Agregar persona existente
+            Add existing beneficiary
             <select value="" onChange={(event) => addDraftPayout(event.target.value)}>
-              <option value="">Seleccionar persona</option>
+              <option value="">Select beneficiary</option>
               {beneficiaries.map((beneficiary) => (
                 <option key={beneficiary.id} value={beneficiary.id}>
                   {beneficiary.name} ({beneficiary.country})
@@ -185,22 +193,22 @@ export function BatchesPage({
             })}
           </div>
           <button className="primary" onClick={onCreateBatch}>
-            Crear proyecto
+            Create project
           </button>
           <details className="compact-details">
-            <summary>Importar CSV</summary>
+            <summary>Import CSV</summary>
             <textarea value={csvImport} onChange={(event) => setCsvImport(event.target.value)} rows={5} />
             <button className="ghost" onClick={onImportBatch}>
-              Importar como proyecto
+              Import as project
             </button>
           </details>
         </article>
 
         <article className="panel ops-panel">
-          <h2>Crear persona</h2>
-          <PersonForm form={personForm} setForm={setPersonForm} />
+          <h2>Create beneficiary</h2>
+          <PersonForm form={personForm} setForm={setPersonForm} projectOptions={projectOptions} />
           <button className="ghost" onClick={onCreatePerson}>
-            Guardar persona
+            Save beneficiary
           </button>
         </article>
       </aside>
@@ -208,32 +216,32 @@ export function BatchesPage({
       <article className="panel ops-panel project-detail-panel">
         {!selectedBatch ? (
           <div className="empty-state">
-            <h2>Selecciona un proyecto</h2>
-            <p>Revisa personas, aprobaciones, fondeo y pagos desde un solo lugar.</p>
+            <h2>Select a project</h2>
+            <p>Review people, approvals, funding, and payments from one place.</p>
           </div>
         ) : (
           <>
             <div className="detail-header project-detail-header">
               <div>
-                <p className="eyebrow">Proyecto</p>
+                <p className="eyebrow">Project</p>
                 <h2>{selectedBatch.batch.name}</h2>
                 <span className="pill neutral">{humanize(selectedBatch.batch.status)}</span>
               </div>
               <div className="inline-actions project-actions">
                 <button className="ghost" onClick={() => onQuote(selectedBatch.batch.id)}>
-                  Cotizar aprobados
+                  Quote approved payouts
                 </button>
                 <button className="ghost" onClick={() => onApprove(selectedBatch.batch.id)}>
-                  Aprobar proyecto
+                  Approve project
                 </button>
                 {!selectedBatch.fundingInstruction && selectedBatch.batch.status === "approved" ? (
                   <button className="primary" onClick={() => onGenerateFunding(selectedBatch.batch.id)}>
-                    Generar fondeo
+                    Generate funding
                   </button>
                 ) : null}
                 {["funded", "dispatching", "failed"].includes(selectedBatch.batch.status) ? (
                   <button className="primary" onClick={() => onSendApproved(selectedBatch.batch.id)}>
-                    Enviar pagos aprobados
+                    Send approved payouts
                   </button>
                 ) : null}
               </div>
@@ -241,40 +249,40 @@ export function BatchesPage({
 
             <div className="project-stat-grid">
               <div>
-                <span>Personas</span>
+                <span>People</span>
                 <strong>{selectedProjectPayouts.length}</strong>
               </div>
               <div>
-                <span>Aprobadas</span>
+                <span>Approved</span>
                 <strong>{selectedProjectStats.approved.length}</strong>
               </div>
               <div>
-                <span>Pendientes</span>
+                <span>Pending</span>
                 <strong>{selectedProjectStats.pending.length}</strong>
               </div>
               <div>
-                <span>Fondeo requerido</span>
+                <span>Funding required</span>
                 <strong>{selectedBatch.batch.totalFundingUsdc.toFixed(2)} USDC</strong>
               </div>
             </div>
 
             <section className="project-section">
               <div className="panel-title-row">
-                <h2>Personas del proyecto</h2>
+                <h2>Project people</h2>
                 <span className="helper">
-                  {selectedProjectStats.excluded.length} excluidas · {selectedProjectStats.failed.length} fallidas
+                  {selectedProjectStats.excluded.length} excluded · {selectedProjectStats.failed.length} failed
                 </span>
               </div>
               <div className="table-shell">
                 <table className="ops-table project-people-table">
                   <thead>
                     <tr>
-                      <th>Persona</th>
-                      <th>Banco</th>
-                      <th>Monto</th>
-                      <th>Aprobación</th>
-                      <th>Pago</th>
-                      <th>Acciones</th>
+                      <th>Person</th>
+                      <th>Bank</th>
+                      <th>Amount</th>
+                      <th>Approval</th>
+                      <th>Payout</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -285,7 +293,7 @@ export function BatchesPage({
                           <td>
                             <strong>{payout.beneficiaryName}</strong>
                             <span className="cell-subtext">
-                              {payout.country} · {beneficiary?.email ?? "sin email"}
+                              {payout.country} · {beneficiary?.email ?? "no email"}
                             </span>
                           </td>
                           <td>
@@ -323,16 +331,16 @@ export function BatchesPage({
                               {canEditProject ? (
                                 <>
                                   <button className="ghost" onClick={() => onUpdatePayout(payout.id, { approvalStatus: "approved" })}>
-                                    Aprobar
+                                    Approve
                                   </button>
                                   <button className="ghost" onClick={() => onUpdatePayout(payout.id, { approvalStatus: "excluded" })}>
-                                    Excluir
+                                    Exclude
                                   </button>
                                 </>
                               ) : null}
                               {selectedBatch.batch.status === "funded" && payout.approvalStatus === "approved" && payout.status === "funded" ? (
                                 <button className="ghost" onClick={() => onDispatch(payout.id)}>
-                                  Enviar
+                                  Send
                                 </button>
                               ) : null}
                               {beneficiary ? (
@@ -343,7 +351,7 @@ export function BatchesPage({
                                     setPersonForm(getPersonForm(beneficiary));
                                   }}
                                 >
-                                  Editar
+                                  Edit
                                 </button>
                               ) : null}
                             </div>
@@ -359,21 +367,21 @@ export function BatchesPage({
             {editingPersonId ? (
               <section className="project-section inline-editor">
                 <div className="panel-title-row">
-                  <h2>Editar persona</h2>
+                  <h2>Edit beneficiary</h2>
                   <button className="ghost" onClick={() => setEditingPersonId(null)}>
-                    Cerrar
+                    Close
                   </button>
                 </div>
-                <PersonForm form={personForm} setForm={setPersonForm} />
+                <PersonForm form={personForm} setForm={setPersonForm} projectOptions={projectOptions} />
                 <button className="primary" onClick={() => onUpdatePerson(editingPersonId, personForm)}>
-                  Guardar cambios
+                  Save changes
                 </button>
               </section>
             ) : null}
 
             <div className="project-sections-grid">
               <section className="project-section">
-                <h2>Fondeo</h2>
+                <h2>Funding</h2>
                 {selectedBatch.quote ? (
                   <div className="info-strip">
                     <div>
@@ -381,33 +389,33 @@ export function BatchesPage({
                       <strong>{selectedBatch.quote.totalFundingUsdc.toFixed(2)}</strong>
                     </div>
                     <div>
-                      <span>Fees locales</span>
+                      <span>Local fees</span>
                       <strong>{selectedBatch.quote.totalFeesLocal.toFixed(2)}</strong>
                     </div>
                     <div>
-                      <span>Expira</span>
+                      <span>Expires</span>
                       <strong>{new Date(selectedBatch.quote.expiresAt).toLocaleString()}</strong>
                     </div>
                   </div>
                 ) : (
-                  <p className="helper">Cotiza las personas aprobadas para calcular el fondeo del contrato.</p>
+                  <p className="helper">Quote approved beneficiaries to calculate project funding.</p>
                 )}
                 {selectedBatch.fundingInstruction ? (
                   <div className="funding-card">
-                    <p>Estado: {humanize(selectedBatch.fundingInstruction.status)}</p>
+                    <p>Status: {humanize(selectedBatch.fundingInstruction.status)}</p>
                     <p>Wallet: {selectedBatch.fundingInstruction.recipientAddress}</p>
                     <p>Token account: {selectedBatch.fundingInstruction.recipientTokenAccount}</p>
-                    <p>Referencia: {selectedBatch.fundingInstruction.reference}</p>
-                    <p>Esperado: {selectedBatch.fundingInstruction.expectedAmount.toFixed(2)} USDC</p>
+                    <p>Reference: {selectedBatch.fundingInstruction.reference}</p>
+                    <p>Expected: {selectedBatch.fundingInstruction.expectedAmount.toFixed(2)} USDC</p>
                     <div className="inline-actions">
                       <button className="ghost" onClick={() => onRefreshFunding(selectedBatch.fundingInstruction!.id)}>
-                        Revisar fondeo
+                        Refresh funding
                       </button>
                       <button
                         className="ghost"
                         onClick={() => onRecordFallbackFunding(selectedBatch.fundingInstruction!.id, selectedBatch.fundingInstruction!.expectedAmount)}
                       >
-                        Registrar fondeo manual
+                        Record manual funding
                       </button>
                     </div>
                   </div>
@@ -415,7 +423,7 @@ export function BatchesPage({
               </section>
 
               <section className="project-section">
-                <h2>Auditoría</h2>
+                <h2>Audit</h2>
                 <div className="audit-list compact-audit">
                   {selectedBatch.auditTrail.map((entry) => (
                     <div key={entry.id} className="audit-item">
@@ -434,60 +442,28 @@ export function BatchesPage({
   );
 }
 
-function PersonForm({ form, setForm }: { form: CreateBeneficiaryDto; setForm: (next: CreateBeneficiaryDto) => void }) {
+function PersonForm({
+  form,
+  setForm,
+  projectOptions,
+}: {
+  form: CreateBeneficiaryDto;
+  setForm: (next: CreateBeneficiaryDto) => void;
+  projectOptions: Array<{ id: string; name: string }>;
+}) {
   return (
-    <div className="form-grid compact-person-form">
+    <>
       <label>
-        Nombre
-        <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-      </label>
-      <label>
-        Email
-        <input value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
-      </label>
-      <label>
-        País
-        <select value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value as "CO" | "MX" })}>
-          <option value="CO">Colombia</option>
-          <option value="MX">Mexico</option>
+        Country
+        <select value={form.country} onChange={(event) => setForm(applyBeneficiaryCountryDefaults(form, event.target.value as CreateBeneficiaryDto["country"]))}>
+          {beneficiaryCountryOptions.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </label>
-      <label>
-        Tipo
-        <select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value as "employee" | "contractor" })}>
-          <option value="employee">Empleado</option>
-          <option value="contractor">Contratista</option>
-        </select>
-      </label>
-      <label>
-        Banco
-        <input value={form.bankName} onChange={(event) => setForm({ ...form, bankName: event.target.value })} />
-      </label>
-      <label>
-        Titular
-        <input value={form.accountHolderName} onChange={(event) => setForm({ ...form, accountHolderName: event.target.value })} />
-      </label>
-      {form.country === "CO" ? (
-        <>
-          <label>
-            Cuenta
-            <input value={form.accountNumber} onChange={(event) => setForm({ ...form, accountNumber: event.target.value })} />
-          </label>
-          <label>
-            Tipo cuenta
-            <input value={form.accountType} onChange={(event) => setForm({ ...form, accountType: event.target.value })} />
-          </label>
-          <label>
-            Documento
-            <input value={form.documentNumber} onChange={(event) => setForm({ ...form, documentNumber: event.target.value })} />
-          </label>
-        </>
-      ) : (
-        <label>
-          CLABE
-          <input value={form.clabe} onChange={(event) => setForm({ ...form, clabe: event.target.value })} />
-        </label>
-      )}
-    </div>
+      <BeneficiaryFormFields form={form} setForm={setForm} projectOptions={projectOptions} compact />
+    </>
   );
 }

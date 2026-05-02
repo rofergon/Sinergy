@@ -8,13 +8,19 @@ export const initialLoginForm = {
 export const emptyBeneficiaryForm: CreateBeneficiaryDto = {
   name: "",
   email: "",
+  projectId: "",
+  projectName: "",
   country: "CO",
   kind: "employee",
   bankName: "",
   accountHolderName: "",
+  phoneNumber: "",
   accountNumber: "",
-  accountType: "",
+  accountType: "savings",
+  bankKey: "",
+  bankKeyType: "",
   clabe: "",
+  documentType: "CC",
   documentNumber: "",
 };
 
