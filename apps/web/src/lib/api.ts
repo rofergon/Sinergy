@@ -14,6 +14,7 @@ import type {
   FundingInstruction,
   FundingTransaction,
   Payout,
+  UpdatePayoutDto,
   SessionUser,
 } from "@latam-payouts/contracts";
 
@@ -120,6 +121,12 @@ export const api = {
   },
   dispatchPayout(token: string, payoutId: string) {
     return request<Payout>(`/payouts/${payoutId}/dispatch`, { token, method: "POST" });
+  },
+  updatePayout(token: string, payoutId: string, body: UpdatePayoutDto) {
+    return request<Payout>(`/payouts/${payoutId}`, { token, method: "PATCH", body });
+  },
+  sendApprovedPayouts(token: string, batchId: string) {
+    return request<BatchDetail>(`/batches/${batchId}/send-approved`, { token, method: "POST" });
   },
   listExceptions(token: string) {
     return request<ExceptionCase[]>("/exceptions", { token });

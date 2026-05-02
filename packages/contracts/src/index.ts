@@ -29,6 +29,7 @@ export type PayoutStatus =
   | "dispatching"
   | "paid"
   | "failed";
+export type PayoutApprovalStatus = "pending" | "approved" | "excluded";
 export type ExceptionType =
   | "quote_expired"
   | "funding_incomplete"
@@ -112,6 +113,10 @@ export interface Payout {
   fxRate: number;
   fundingAmountUsdc: number;
   status: PayoutStatus;
+  approvalStatus: PayoutApprovalStatus;
+  approvalComment?: string;
+  approvedByUserId?: string;
+  approvedAt?: string;
   partnerRoute: string;
   validationErrors: string[];
 }
@@ -296,4 +301,10 @@ export interface CreateBatchDto {
 export interface ImportBatchDto {
   name: string;
   csv: string;
+}
+
+export interface UpdatePayoutDto {
+  amountLocal?: number;
+  approvalStatus?: PayoutApprovalStatus;
+  approvalComment?: string;
 }

@@ -9,7 +9,7 @@ export const emptyBeneficiaryForm: CreateBeneficiaryDto = {
   name: "",
   email: "",
   country: "CO",
-  kind: "contractor",
+  kind: "employee",
   bankName: "",
   accountHolderName: "",
   accountNumber: "",
@@ -19,7 +19,7 @@ export const emptyBeneficiaryForm: CreateBeneficiaryDto = {
 };
 
 export const initialBatchForm: CreateBatchDto = {
-  name: "New payroll batch",
+  name: "New payroll project",
   payouts: [],
 };
 

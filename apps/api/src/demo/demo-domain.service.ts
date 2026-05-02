@@ -22,6 +22,7 @@ import {
   type Payout,
   type Quote,
   type SessionUser,
+  type UpdatePayoutDto,
   type WebhookEvent,
 } from "@latam-payouts/contracts";
 import { randomUUID } from "node:crypto";
@@ -270,6 +271,7 @@ export class DemoDomainService {
         fxRate: 0,
         fundingAmountUsdc: 0,
         status: validationErrors.length ? "draft" : "validated",
+        approvalStatus: "pending",
         partnerRoute: beneficiary.country === "CO" ? "mock-colombia-bank" : "mock-mexico-bank",
         validationErrors,
       };
@@ -338,7 +340,14 @@ export class DemoDomainService {
     const batch = this.requireBatch(batchId);
     batch.status = "awaiting_funding";
     this.payouts
-      .filter((item) => item.batchId === batchId && item.status !== "paid" && item.status !== "failed" && item.status !== "in_review")
+      .filter(
+        (item) =>
+          item.batchId === batchId &&
+          item.approvalStatus === "approved" &&
+          item.status !== "paid" &&
+          item.status !== "failed" &&
+          item.status !== "in_review",
+      )
       .forEach((payout) => {
         payout.status = "awaiting_funding";
       });
@@ -351,7 +360,14 @@ export class DemoDomainService {
     if (status === "reconciled") {
       batch.status = "funded";
       this.payouts
-        .filter((item) => item.batchId === batchId && item.status !== "paid" && item.status !== "failed" && item.status !== "in_review")
+        .filter(
+          (item) =>
+            item.batchId === batchId &&
+            item.approvalStatus === "approved" &&
+            item.status !== "paid" &&
+            item.status !== "failed" &&
+            item.status !== "in_review",
+        )
         .forEach((payout) => {
           payout.status = "funded";
         });
@@ -360,7 +376,14 @@ export class DemoDomainService {
 
     batch.status = "awaiting_funding";
     this.payouts
-      .filter((item) => item.batchId === batchId && item.status !== "paid" && item.status !== "failed" && item.status !== "in_review")
+      .filter(
+        (item) =>
+          item.batchId === batchId &&
+          item.approvalStatus === "approved" &&
+          item.status !== "paid" &&
+          item.status !== "failed" &&
+          item.status !== "in_review",
+      )
       .forEach((payout) => {
         payout.status = "awaiting_funding";
       });
@@ -370,15 +393,34 @@ export class DemoDomainService {
   createQuote(user: SessionUser, batchId: string): Quote {
     const batch = this.requireBatch(batchId);
     const payouts = this.payouts.filter((item) => item.batchId === batchId);
+    const approvedPayouts = payouts.filter((item) => item.approvalStatus === "approved");
 
-    if (payouts.some((item) => item.validationErrors.length)) {
+    if (!approvedPayouts.length) {
       this.raiseException({
         type: "manual_review",
         batchId,
-        summary: "Batch contains invalid payouts and cannot be quoted.",
+        summary: "Project needs at least one approved person before it can be quoted.",
       });
-      throw new NotFoundException("Batch contains invalid payouts.");
+      throw new NotFoundException("Project needs at least one approved person.");
     }
+
+    if (approvedPayouts.some((item) => item.validationErrors.length)) {
+      this.raiseException({
+        type: "manual_review",
+        batchId,
+        summary: "Project contains invalid approved payouts and cannot be quoted.",
+      });
+      throw new NotFoundException("Project contains invalid approved payouts.");
+    }
+
+    payouts
+      .filter((payout) => payout.approvalStatus !== "approved")
+      .forEach((payout) => {
+        payout.feeLocal = 0;
+        payout.fxRate = 0;
+        payout.fundingAmountUsdc = 0;
+        payout.status = payout.validationErrors.length ? "draft" : "validated";
+      });
 
     const quote: Quote = {
       id: randomUUID(),
@@ -386,7 +428,7 @@ export class DemoDomainService {
       expiresAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
       totalFundingUsdc: 0,
       totalFeesLocal: 0,
-      payouts: payouts.map((payout) => {
+      payouts: approvedPayouts.map((payout) => {
         const feeLocal = Math.round(payout.amountLocal * 0.015 * 100) / 100;
         const fxRate = payout.country === "CO" ? 4100 : 17.2;
         const fundingAmountUsdc = Number(((payout.amountLocal + feeLocal) / fxRate).toFixed(2));
@@ -409,6 +451,7 @@ export class DemoDomainService {
     quote.totalFundingUsdc = Number(quote.payouts.reduce((sum, item) => sum + item.fundingAmountUsdc, 0).toFixed(2));
 
     batch.quoteId = quote.id;
+    batch.totalLocal = approvedPayouts.reduce((total, item) => total + item.amountLocal, 0);
     batch.totalFundingUsdc = quote.totalFundingUsdc;
     batch.status = "awaiting_approval";
 
@@ -449,7 +492,7 @@ export class DemoDomainService {
 
     batch.status = outcome === "approved" ? "approved" : "failed";
     this.payouts
-      .filter((item) => item.batchId === batchId)
+      .filter((item) => item.batchId === batchId && item.approvalStatus === "approved")
       .forEach((payout) => {
         payout.status = outcome === "approved" ? "approved" : "failed";
       });
@@ -486,7 +529,7 @@ export class DemoDomainService {
     };
     this.fundingInstructions = [instruction, ...this.fundingInstructions];
     batch.status = "awaiting_funding";
-    this.payouts.filter((item) => item.batchId === batchId).forEach((payout) => {
+    this.payouts.filter((item) => item.batchId === batchId && item.approvalStatus === "approved").forEach((payout) => {
       payout.status = "awaiting_funding";
     });
     this.logAudit("batch", batchId, "funding.instructions_generated", user, {
@@ -550,7 +593,7 @@ export class DemoDomainService {
       });
     } else {
       batch.status = "funded";
-      this.payouts.filter((item) => item.batchId === batch.id).forEach((payout) => {
+      this.payouts.filter((item) => item.batchId === batch.id && item.approvalStatus === "approved").forEach((payout) => {
         payout.status = "funded";
       });
       this.ledgerEntries = [
@@ -583,8 +626,16 @@ export class DemoDomainService {
     const payout = this.requirePayout(payoutId);
     const batch = this.requireBatch(payout.batchId);
 
-    if (batch.status !== "funded") {
-      throw new NotFoundException("Batch must be funded before payout dispatch.");
+    if (!["funded", "dispatching", "failed"].includes(batch.status)) {
+      throw new NotFoundException("Project must be funded before payout dispatch.");
+    }
+
+    if (payout.approvalStatus !== "approved") {
+      throw new NotFoundException("Only approved people can be paid.");
+    }
+
+    if (payout.status !== "funded") {
+      throw new NotFoundException("Only funded pending payments can be dispatched.");
     }
 
     if (payout.amountLocal > (payout.country === "MX" ? 50000 : 5000000)) {
@@ -664,6 +715,71 @@ export class DemoDomainService {
 
   listPayouts(): Payout[] {
     return this.payouts;
+  }
+
+  updatePayout(user: SessionUser, payoutId: string, dto: UpdatePayoutDto): Payout {
+    const payout = this.requirePayout(payoutId);
+    const batch = this.requireBatch(payout.batchId);
+    const editableStatuses: Batch["status"][] = ["draft", "validated", "quoted", "awaiting_approval", "approved"];
+
+    if (!editableStatuses.includes(batch.status)) {
+      throw new NotFoundException("People can only be edited before project funding starts.");
+    }
+
+    if (dto.amountLocal !== undefined) {
+      payout.amountLocal = dto.amountLocal;
+      payout.validationErrors = this.validatePayout(payout.country, payout.amountLocal, this.requireBeneficiary(payout.beneficiaryId));
+      payout.feeLocal = 0;
+      payout.fxRate = 0;
+      payout.fundingAmountUsdc = 0;
+      payout.status = payout.validationErrors.length ? "draft" : "validated";
+    }
+
+    if (dto.approvalStatus !== undefined) {
+      payout.approvalStatus = dto.approvalStatus;
+      payout.approvalComment = dto.approvalComment;
+      if (dto.approvalStatus === "approved") {
+        payout.approvedByUserId = user.id;
+        payout.approvedAt = new Date().toISOString();
+      } else {
+        payout.approvedByUserId = undefined;
+        payout.approvedAt = undefined;
+      }
+    } else if (dto.approvalComment !== undefined) {
+      payout.approvalComment = dto.approvalComment;
+    }
+
+    this.invalidateQuote(batch.id);
+    this.recalculateDraftBatchTotals(batch.id);
+    this.logAudit("payout", payout.id, "payout.updated", user, {
+      batchId: batch.id,
+      amountLocal: payout.amountLocal,
+      approvalStatus: payout.approvalStatus,
+    });
+
+    return payout;
+  }
+
+  sendApprovedPayouts(user: SessionUser, batchId: string): BatchDetail {
+    const batch = this.requireBatch(batchId);
+    if (!["funded", "dispatching", "failed"].includes(batch.status)) {
+      throw new NotFoundException("Project must be funded before approved payments can be sent.");
+    }
+
+    const payablePayouts = this.payouts.filter(
+      (item) => item.batchId === batchId && item.approvalStatus === "approved" && item.status === "funded",
+    );
+
+    if (!payablePayouts.length) {
+      throw new NotFoundException("There are no funded approved people ready to pay.");
+    }
+
+    for (const payout of payablePayouts) {
+      this.dispatchPayout(user, payout.id);
+    }
+
+    this.logAudit("batch", batch.id, "project.send_approved", user, { payoutCount: payablePayouts.length });
+    return this.getBatchDetail(batch.id);
   }
 
   resolveComplianceCase(user: SessionUser, caseId: string): ComplianceCase {
@@ -761,6 +877,20 @@ export class DemoDomainService {
     return payout;
   }
 
+  private invalidateQuote(batchId: string): void {
+    const batch = this.requireBatch(batchId);
+    this.quotes = this.quotes.filter((quote) => quote.batchId !== batchId);
+    batch.quoteId = undefined;
+    batch.totalFundingUsdc = 0;
+  }
+
+  private recalculateDraftBatchTotals(batchId: string): void {
+    const batch = this.requireBatch(batchId);
+    const payouts = this.payouts.filter((item) => item.batchId === batchId);
+    batch.totalLocal = payouts.reduce((total, item) => total + item.amountLocal, 0);
+    batch.status = payouts.some((item) => item.validationErrors.length) ? "draft" : "validated";
+  }
+
   private validatePayout(country: CountryCode, amountLocal: number, beneficiary: Beneficiary): string[] {
     const corridor = this.corridors.find((item) => item.code === country);
     const errors: string[] = [];
@@ -791,7 +921,11 @@ export class DemoDomainService {
   }
 
   private resolveBatchStatus(batchId: string): Batch["status"] {
-    const payouts = this.payouts.filter((item) => item.batchId === batchId);
+    const payouts = this.payouts.filter((item) => item.batchId === batchId && item.approvalStatus === "approved");
+
+    if (!payouts.length) {
+      return "completed";
+    }
 
     if (payouts.some((item) => item.status === "in_review")) {
       return "in_review";
@@ -916,6 +1050,9 @@ export class DemoDomainService {
       ],
     });
 
+    detail.payouts.forEach((payout) => {
+      this.updatePayout(user, payout.id, { approvalStatus: "approved" });
+    });
     this.createQuote(user, detail.batch.id);
   }
 }

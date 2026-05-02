@@ -94,6 +94,10 @@ model Payout {
   fxRate            Decimal         @db.Decimal(18, 6)
   fundingAmountUsdc Decimal         @db.Decimal(18, 6)
   status            String
+  approvalStatus    String          @default("pending")
+  approvalComment   String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
   partnerRoute      String
   validationErrors  Json
   batch             Batch           @relation(fields: [batchId], references: [id], onDelete: Cascade)

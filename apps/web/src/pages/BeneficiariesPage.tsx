@@ -12,10 +12,10 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
   return (
     <section className="page-grid two-columns">
       <article className="panel">
-        <h2>Beneficiary management</h2>
+        <h2>Personas</h2>
         <div className="form-grid">
           <label>
-            Name
+            Nombre
             <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
           </label>
           <label>
@@ -23,32 +23,39 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
             <input value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
           </label>
           <label>
-            Country
+            País
             <select value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value as "CO" | "MX" })}>
               <option value="CO">Colombia</option>
               <option value="MX">Mexico</option>
             </select>
           </label>
           <label>
-            Bank name
+            Tipo
+            <select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value as "employee" | "contractor" })}>
+              <option value="employee">Empleado</option>
+              <option value="contractor">Contratista</option>
+            </select>
+          </label>
+          <label>
+            Banco
             <input value={form.bankName} onChange={(event) => setForm({ ...form, bankName: event.target.value })} />
           </label>
           <label>
-            Account holder
+            Titular
             <input value={form.accountHolderName} onChange={(event) => setForm({ ...form, accountHolderName: event.target.value })} />
           </label>
           {form.country === "CO" ? (
             <>
               <label>
-                Account number
+                Cuenta
                 <input value={form.accountNumber} onChange={(event) => setForm({ ...form, accountNumber: event.target.value })} />
               </label>
               <label>
-                Account type
+                Tipo de cuenta
                 <input value={form.accountType} onChange={(event) => setForm({ ...form, accountType: event.target.value })} />
               </label>
               <label>
-                Document number
+                Documento
                 <input value={form.documentNumber} onChange={(event) => setForm({ ...form, documentNumber: event.target.value })} />
               </label>
             </>
@@ -60,19 +67,20 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
           )}
         </div>
         <button className="primary" onClick={onCreate}>
-          Create beneficiary
+          Crear persona
         </button>
       </article>
       <article className="panel">
-        <h2>Current beneficiaries</h2>
+        <h2>Personas registradas</h2>
         <div className="table-shell">
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Country</th>
-                <th>Currency</th>
-                <th>Validation</th>
+                <th>Nombre</th>
+                <th>País</th>
+                <th>Tipo</th>
+                <th>Moneda</th>
+                <th>Validación</th>
               </tr>
             </thead>
             <tbody>
@@ -80,6 +88,7 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
                 <tr key={beneficiary.id}>
                   <td>{beneficiary.name}</td>
                   <td>{beneficiary.country}</td>
+                  <td>{beneficiary.kind}</td>
                   <td>{beneficiary.currency}</td>
                   <td>
                     <span className={beneficiary.validationStatus === "valid" ? "pill success" : "pill danger"}>

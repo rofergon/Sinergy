@@ -84,6 +84,12 @@ export const api = {
     dispatchPayout(token, payoutId) {
         return request(`/payouts/${payoutId}/dispatch`, { token, method: "POST" });
     },
+    updatePayout(token, payoutId, body) {
+        return request(`/payouts/${payoutId}`, { token, method: "PATCH", body });
+    },
+    sendApprovedPayouts(token, batchId) {
+        return request(`/batches/${batchId}/send-approved`, { token, method: "POST" });
+    },
     listExceptions(token) {
         return request("/exceptions", { token });
     },

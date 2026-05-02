@@ -1,79 +1,87 @@
-import type { BootstrapPayload } from "../lib/api";
-import { MetricIcon, NavIcon } from "../components/icons";
+import type { Batch, BootstrapPayload, Payout } from "../lib/api";
+import { MetricIcon } from "../components/icons";
+
+type MetricTone = "blue" | "green" | "amber" | "red";
+
+function humanize(value: string) {
+  return value.replace(/_/g, " ");
+}
+
+function formatUsdc(value: number) {
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)} USDC`;
+}
+
+function statusTone(status: string): MetricTone {
+  if (["completed", "paid", "funded"].includes(status)) {
+    return "green";
+  }
+  if (["failed"].includes(status)) {
+    return "red";
+  }
+  if (["awaiting_funding", "awaiting_approval", "in_review"].includes(status)) {
+    return "amber";
+  }
+  return "blue";
+}
+
+function getProjectPayouts(batch: Batch, payouts: Payout[]) {
+  return payouts.filter((payout) => payout.batchId === batch.id);
+}
 
 export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
-  type MetricTone = "blue" | "green" | "amber" | "red";
-  type Priority = "High" | "Medium";
-  type QueueTone = "blue" | "green" | "amber" | "red";
-
-  const awaitingApproval = data?.batches.filter((item) => item.status === "awaiting_approval").length ?? 4;
-  const failedPayouts = data?.payouts.filter((item) => item.status === "failed").length ?? 6;
-  const openExceptions = data?.exceptions.filter((item) => item.status === "open").length ?? 9;
+  const batches = data?.batches ?? [];
+  const payouts = data?.payouts ?? [];
+  const activeProjects = batches.filter((batch) => !["completed", "failed"].includes(batch.status));
+  const approvedPayouts = payouts.filter((payout) => payout.approvalStatus === "approved");
+  const payablePayouts = approvedPayouts.filter((payout) => ["funded", "dispatching"].includes(payout.status));
+  const paidPayouts = payouts.filter((payout) => payout.status === "paid");
+  const failedPayouts = payouts.filter((payout) => payout.status === "failed");
+  const pendingApproval = payouts.filter((payout) => payout.approvalStatus === "pending").length;
+  const totalFundingRequired = batches.reduce((sum, batch) => sum + batch.totalFundingUsdc, 0);
+  const fundedAmount = batches
+    .filter((batch) => ["funded", "dispatching", "completed"].includes(batch.status))
+    .reduce((sum, batch) => sum + batch.totalFundingUsdc, 0);
 
   const metricCards: Array<{ label: string; value: string; detail: string; tone: MetricTone; icon: string }> = [
     {
-      label: "Awaiting approval",
-      value: `${awaitingApproval} batches`,
-      detail: "18,430 USDC - 2 quotes expiring soon",
+      label: "Proyectos activos",
+      value: activeProjects.length.toString(),
+      detail: `${batches.length} proyectos totales`,
       tone: "blue",
       icon: "document",
     },
     {
-      label: "Funding required",
-      value: "12,200 USDC",
-      detail: "7,000 received - 5,200 shortfall",
+      label: "Fondeo requerido",
+      value: formatUsdc(totalFundingRequired),
+      detail: `${formatUsdc(fundedAmount)} fondeado`,
       tone: "green",
       icon: "wallet",
     },
     {
-      label: "Payouts at risk",
-      value: failedPayouts.toString(),
-      detail: "failed / in review - 3 overdue",
+      label: "Personas por aprobar",
+      value: pendingApproval.toString(),
+      detail: `${approvedPayouts.length} aprobadas para pago`,
       tone: "amber",
       icon: "alert",
     },
     {
-      label: "Open exceptions",
-      value: openExceptions.toString(),
-      detail: "3 high severity",
-      tone: "red",
-      icon: "shield",
-    },
-    {
-      label: "Today's payout volume",
-      value: "12.4K USDC",
-      detail: "COP 45.2M - MXN 180K - ARS 12.8M",
+      label: "Pagos en curso",
+      value: payablePayouts.length.toString(),
+      detail: "fondeados o enviándose",
       tone: "blue",
       icon: "volume",
     },
-  ];
-  const actionRows: Array<[Priority, string, string, string, string]> = [
-    ["High", "Batch May Payroll", "Approver", "Quote expires in 12 min", "Approve / Reject"],
-    ["High", "Funding shortfall", "Finance", "4,450 USDC missing", "Rescan / Investigate"],
-    ["Medium", "Luis Herrera payout", "Finance", "Partner failed", "Retry / Escalate"],
-    ["Medium", "Manual review", "Compliance", "Amount over threshold", "Clear / Hold"],
-  ];
-  const queueRows: Array<[string, number, string, string, QueueTone]> = [
-    ["Awaiting funding", 12, "8,400", "2h 15m", "blue"],
-    ["Funded", 9, "5,200", "45m", "green"],
-    ["Dispatching", 4, "2,100", "20m", "amber"],
-    ["Paid", 86, "44,000", "—", "green"],
-    ["Failed", 3, "900", "1h 05m", "red"],
-  ];
-  const fundingRows: Array<[string, string, string, "Reconciled" | "Partial" | "Pending", string, string]> = [
-    ["May Payroll", "6,420 USDC", "6,420 USDC", "Reconciled", "Treasury-01", "10:42 AM"],
-    ["Contractor Cycle MX", "3,800 USDC", "2,150 USDC", "Partial", "Treasury-02", "10:37 AM"],
-    ["Ops Batch CO", "1,980 USDC", "0 USDC", "Pending", "Treasury-01", "10:20 AM"],
-  ];
-  const exceptionRows: Array<[string, number, number, string]> = [
-    ["Funding incomplete", 2, 1, "3h"],
-    ["Payout failed", 4, 2, "1h"],
-    ["Manual review", 3, 1, "45m"],
-    ["Callback inconsistent", 1, 1, "20m"],
+    {
+      label: "Pagos fallidos",
+      value: failedPayouts.length.toString(),
+      detail: `${paidPayouts.length} pagados correctamente`,
+      tone: failedPayouts.length ? "red" : "green",
+      icon: "shield",
+    },
   ];
 
   return (
-    <section className="operations-page">
+    <section className="operations-page monitor-page">
       <div className="ops-card-grid">
         {metricCards.map((card) => (
           <article className={`metric-card ops-metric ${card.tone}`} key={card.label}>
@@ -89,138 +97,81 @@ export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
         ))}
       </div>
 
-      <article className="panel ops-panel action-panel">
-        <h2>Action needed now</h2>
-        <div className="table-shell">
-          <table className="ops-table">
-            <thead>
-              <tr>
-                <th>Priority</th>
-                <th>Item</th>
-                <th>Owner</th>
-                <th>Reason</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {actionRows.map(([priority, item, owner, reason, action]) => (
-                <tr key={item}>
-                  <td>
-                    <span className={priority === "High" ? "pill danger" : "pill warning"}>{priority}</span>
-                  </td>
-                  <td>{item}</td>
-                  <td>
-                    <span className="owner-cell">
-                      <NavIcon name="users" />
-                      {owner}
-                    </span>
-                  </td>
-                  <td className={priority === "High" ? "danger-text" : "warning-text"}>{reason}</td>
-                  <td>
-                    <button className={priority === "High" ? "outline danger" : "outline warning"}>
-                      {action}
-                      <span className="button-arrow" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </article>
-
-      <div className="operations-split">
-        <article className="panel ops-panel">
-          <h2>Funding & reconciliation</h2>
-          <div className="table-shell">
-            <table className="ops-table">
-              <thead>
-                <tr>
-                  <th>Batch</th>
-                  <th>Expected</th>
-                  <th>Received</th>
-                  <th>Status</th>
-                  <th>Source wallet</th>
-                  <th>Last scan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fundingRows.map(([batch, expected, received, status, wallet, scan]) => (
-                  <tr key={batch}>
-                    <td>{batch}</td>
-                    <td>{expected}</td>
-                    <td>{received}</td>
-                    <td>
-                      <span className={status === "Reconciled" ? "pill success" : status === "Partial" ? "pill warning" : "pill neutral"}>
-                        {status}
-                      </span>
-                    </td>
-                    <td>{wallet}</td>
-                    <td>{scan}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <article className="panel ops-panel">
-          <h2>Payout pipeline</h2>
-          <div className="table-shell">
-            <table className="ops-table pipeline-table">
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Count</th>
-                  <th>Amount USDC</th>
-                  <th>Oldest item</th>
-                </tr>
-              </thead>
-              <tbody>
-                {queueRows.map(([status, count, amount, oldest, tone]) => (
-                  <tr key={status}>
-                    <td>
-                      <span className="queue-status">
-                        <span className={`queue-dot ${tone}`} />
-                        {status}
-                      </span>
-                    </td>
-                    <td>{count}</td>
-                    <td>{amount}</td>
-                    <td className={tone === "red" ? "danger-text" : ""}>{oldest}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </div>
-
       <article className="panel ops-panel">
-        <h2>Exception inbox summary</h2>
+        <div className="panel-title-row">
+          <h2>Monitoreo por proyecto</h2>
+          <span className="helper">Fondeo, aprobaciones y pagos actuales</span>
+        </div>
         <div className="table-shell">
-          <table className="ops-table">
+          <table className="ops-table project-monitor-table">
             <thead>
               <tr>
-                <th>Type</th>
-                <th>Open</th>
-                <th>High severity</th>
-                <th>Oldest</th>
+                <th>Proyecto</th>
+                <th>Estado</th>
+                <th>Personas</th>
+                <th>Aprobadas</th>
+                <th>Pagadas</th>
+                <th>Fallidas</th>
+                <th>Fondeo</th>
               </tr>
             </thead>
             <tbody>
-              {exceptionRows.map(([type, open, highSeverity, oldest]) => (
-                <tr key={type}>
-                  <td>{type}</td>
-                  <td>{open}</td>
-                  <td>{highSeverity}</td>
-                  <td>{oldest}</td>
-                </tr>
-              ))}
+              {batches.map((batch) => {
+                const projectPayouts = getProjectPayouts(batch, payouts);
+                const approved = projectPayouts.filter((payout) => payout.approvalStatus === "approved").length;
+                const paid = projectPayouts.filter((payout) => payout.status === "paid").length;
+                const failed = projectPayouts.filter((payout) => payout.status === "failed").length;
+                return (
+                  <tr key={batch.id}>
+                    <td>
+                      <strong>{batch.name}</strong>
+                      <span className="cell-subtext">Creado {new Date(batch.createdAt).toLocaleDateString()}</span>
+                    </td>
+                    <td>
+                      <span className={`pill ${statusTone(batch.status) === "red" ? "danger" : statusTone(batch.status) === "green" ? "success" : "warning"}`}>
+                        {humanize(batch.status)}
+                      </span>
+                    </td>
+                    <td>{projectPayouts.length}</td>
+                    <td>{approved}</td>
+                    <td>{paid}</td>
+                    <td className={failed ? "danger-text" : ""}>{failed}</td>
+                    <td>{formatUsdc(batch.totalFundingUsdc)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </article>
+
+      <div className="operations-split monitor-split">
+        {batches.slice(0, 3).map((batch) => {
+          const projectPayouts = getProjectPayouts(batch, payouts);
+          return (
+            <article className="panel ops-panel project-monitor-card" key={batch.id}>
+              <div className="panel-title-row">
+                <h2>{batch.name}</h2>
+                <span className="pill neutral">{humanize(batch.status)}</span>
+              </div>
+              <div className="project-person-feed">
+                {projectPayouts.map((payout) => (
+                  <div className="person-payment-row" key={payout.id}>
+                    <span className={`queue-dot ${statusTone(payout.status)}`} />
+                    <div>
+                      <strong>{payout.beneficiaryName}</strong>
+                      <small>
+                        {humanize(payout.approvalStatus)} · {humanize(payout.status)} · {payout.fundingAmountUsdc.toFixed(2)} USDC
+                      </small>
+                    </div>
+                    <span className="pill neutral">{payout.country}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }

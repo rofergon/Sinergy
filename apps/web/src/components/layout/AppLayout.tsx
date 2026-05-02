@@ -29,15 +29,6 @@ export function AppLayout({ children, loading, message, session, onLogout }: App
           <div className="sidebar-brand">
             <img className="sidebar-logo" src="/sinergysoldark.png" alt="Sinergy Sol" />
           </div>
-          <div className="sidebar-ops-section">
-            <p className="eyebrow sidebar-section-label">Ops Core</p>
-            <a className="sidebar-sub-link sidebar-sub-link-active" href="#">
-              Finance Ops
-            </a>
-            <a className="sidebar-sub-link" href="#">
-              Finance Operator
-            </a>
-          </div>
         </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
@@ -56,8 +47,8 @@ export function AppLayout({ children, loading, message, session, onLogout }: App
       <main className="main-panel">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Operational Workspace</p>
-            <h1>Global companies paying talent in Colombia and Mexico</h1>
+            <p className="eyebrow">Workspace operativo</p>
+            <h1>Proyectos fondeados para pagar talento en Colombia y Mexico</h1>
           </div>
           <div className="status-box">
             <span className="dot live" />

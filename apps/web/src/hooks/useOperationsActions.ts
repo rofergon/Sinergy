@@ -1,4 +1,4 @@
-import type { CreateBatchDto, CreateBeneficiaryDto } from "@latam-payouts/contracts";
+import type { CreateBatchDto, CreateBeneficiaryDto, UpdatePayoutDto } from "@latam-payouts/contracts";
 import { api, type BatchDetail } from "../lib/api";
 import type { SessionState } from "./useSession";
 
@@ -41,6 +41,9 @@ export function useOperationsActions({
     },
     createBeneficiary(form: CreateBeneficiaryDto) {
       void runAction(() => api.createBeneficiary(session!.accessToken, form).then(() => Promise.resolve()), "Beneficiary created.");
+    },
+    updateBeneficiary(id: string, form: Partial<CreateBeneficiaryDto>) {
+      void runAction(() => api.updateBeneficiary(session!.accessToken, id, form).then(() => Promise.resolve()), "Person updated.");
     },
     createBatch(form: CreateBatchDto) {
       void runAction(async () => {
@@ -104,6 +107,21 @@ export function useOperationsActions({
           setSelectedBatch(detail);
         }
       }, "Payout dispatched.");
+    },
+    updatePayout(payoutId: string, body: UpdatePayoutDto) {
+      void runAction(async () => {
+        await api.updatePayout(session!.accessToken, payoutId, body);
+        if (selectedBatch) {
+          const detail = await api.getBatch(session!.accessToken, selectedBatch.batch.id);
+          setSelectedBatch(detail);
+        }
+      }, "Person payment updated.");
+    },
+    sendApprovedPayouts(batchId: string) {
+      void runAction(async () => {
+        const detail = await api.sendApprovedPayouts(session!.accessToken, batchId);
+        setSelectedBatch(detail);
+      }, "Approved payments sent.");
     },
     resolveException(exceptionId: string) {
       void runAction(() => api.resolveException(session!.accessToken, exceptionId).then(() => Promise.resolve()), "Exception resolved.");

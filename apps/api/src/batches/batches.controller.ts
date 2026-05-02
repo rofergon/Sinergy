@@ -59,6 +59,12 @@ export class BatchesController {
     return this.domain.approveBatch(user, id, "approved", body.comment);
   }
 
+  @Post(":id/send-approved")
+  @Roles("admin", "finance_operator")
+  sendApproved(@CurrentUser() user: SessionUser, @Param("id") id: string) {
+    return this.domain.sendApprovedPayouts(user, id);
+  }
+
   @Post(":id/reject")
   @Roles("admin", "approver")
   reject(@CurrentUser() user: SessionUser, @Param("id") id: string, @Body() body: { comment?: string }) {

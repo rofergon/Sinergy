@@ -108,12 +108,18 @@ export default function App() {
               openBatch={(batchId) => void openBatch(batchId)}
               onCreateBatch={() => actions.createBatch(batchForm)}
               onImportBatch={() => actions.importBatch(batchForm.name, csvImport)}
+              personForm={beneficiaryForm}
+              setPersonForm={setBeneficiaryForm}
+              onCreatePerson={() => actions.createBeneficiary(beneficiaryForm)}
+              onUpdatePerson={actions.updateBeneficiary}
+              onUpdatePayout={actions.updatePayout}
               onQuote={actions.createQuote}
               onApprove={actions.approveBatch}
               onGenerateFunding={actions.generateFunding}
               onRefreshFunding={actions.refreshFunding}
               onRecordFallbackFunding={actions.recordFallbackFunding}
               onDispatch={actions.dispatchPayout}
+              onSendApproved={actions.sendApprovedPayouts}
             />
           }
         />

@@ -1,8 +1,8 @@
 export const navItems = [
-  { to: "/", label: "Operations", icon: "compass" },
+  { to: "/", label: "Monitoreo", icon: "compass" },
   { to: "/company", label: "Company", icon: "building" },
-  { to: "/beneficiaries", label: "Beneficiaries", icon: "users" },
-  { to: "/batches", label: "Batches", icon: "layers" },
+  { to: "/beneficiaries", label: "Personas", icon: "users" },
+  { to: "/batches", label: "Proyectos", icon: "layers" },
   { to: "/exceptions", label: "Exceptions", icon: "warning" },
   { to: "/reports", label: "Reports", icon: "chart" },
 ] as const;
