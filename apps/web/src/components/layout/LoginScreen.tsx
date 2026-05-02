@@ -18,7 +18,7 @@ export function LoginScreen({ form, loading, message, onFormChange, onLogin }: L
         <div className="login-copy">
           <div className="brand-lockup">
             <span className="brand-logo-crop">
-              <img className="brand-logo" src="/Logoname.png" alt="Sinergy Sol" />
+              <img className="brand-logo" src="/Logoname.trimmed.png" alt="Sinergy Sol" />
             </span>
           </div>
           <div className="hero-copy">

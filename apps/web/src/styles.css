@@ -153,23 +153,15 @@ label {
 }
 
 .brand-logo-crop {
-  width: 212px;
-  height: 82px;
-  overflow: hidden;
+  width: min(100%, 220px);
   display: block;
-  position: relative;
 }
 
 .brand-logo {
   display: block;
-  width: 350px;
-  max-width: none;
+  width: 100%;
+  max-width: 220px;
   height: auto;
-  object-fit: contain;
-  object-position: left center;
-  position: absolute;
-  left: -66px;
-  top: -27px;
 }
 
 .hero-copy h1 {
@@ -473,21 +465,16 @@ label {
 
 .sidebar-brand {
   width: min(100%, 190px);
-  aspect-ratio: 2.9;
+  aspect-ratio: 3.45;
   margin-bottom: 1.5rem;
-  overflow: hidden;
-  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .sidebar-logo {
   display: block;
-  width: 156%;
-  max-width: none;
+  width: 100%;
   height: auto;
-  position: absolute;
-  left: 50%;
-  top: 55%;
-  transform: translate(-50%, -50%);
 }
 
 .role {
@@ -1365,14 +1352,11 @@ td {
   }
 
   .brand-logo-crop {
-    width: 190px;
-    height: 74px;
+    width: min(100%, 188px);
   }
 
   .brand-logo {
-    width: 322px;
-    left: -61px;
-    top: -25px;
+    max-width: 188px;
   }
 
   .hero-copy h1 {

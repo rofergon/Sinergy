@@ -27,7 +27,7 @@ export function AppLayout({ children, loading, message, session, onLogout }: App
       <aside className="sidebar">
         <div className="sidebar-top">
           <div className="sidebar-brand">
-            <img className="sidebar-logo" src="/sinergysoldark.png" alt="Sinergy Sol" />
+            <img className="sidebar-logo" src="/sinergysoldark.trimmed.png" alt="Sinergy Sol" />
           </div>
         </div>
         <nav className="sidebar-nav">
