@@ -113,11 +113,14 @@ label {
 .brand-lockup {
   display: grid;
   gap: 0.8rem;
+  justify-items: start;
 }
 
 .brand-logo {
-  width: min(100%, 320px);
-  max-height: 120px;
+  display: block;
+  width: clamp(180px, 34vw, 360px);
+  max-width: 100%;
+  max-height: 132px;
   object-fit: contain;
   object-position: left center;
 }
@@ -186,7 +189,7 @@ label {
 }
 
 .sidebar {
-  padding: 2rem 1.4rem;
+  padding: 2rem 1.4rem 1.25rem;
   border-right: 1px solid rgba(19, 32, 47, 0.08);
   background: rgba(16, 27, 39, 0.96);
   color: white;
@@ -196,19 +199,22 @@ label {
 }
 
 .sidebar-brand {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
+  width: min(100%, 205px);
+  aspect-ratio: 2.9;
+  margin-bottom: 1.4rem;
+  overflow: hidden;
+  position: relative;
 }
 
 .sidebar-logo {
   display: block;
-  width: 100%;
-  max-width: 180px;
-  max-height: 84px;
-  object-fit: contain;
-  object-position: left center;
+  width: 156%;
+  max-width: none;
+  height: auto;
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%);
 }
 
 .role {
@@ -219,8 +225,8 @@ label {
   display: block;
   color: rgba(255, 255, 255, 0.76);
   text-decoration: none;
-  padding: 0.9rem 1rem;
-  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
   margin-top: 0.35rem;
 }
 
@@ -458,8 +464,8 @@ td {
   }
 
   .brand-logo {
-    width: min(100%, 240px);
-    max-height: 92px;
+    width: clamp(168px, 56vw, 260px);
+    max-height: 104px;
   }
 
   .hero-copy h1 {
@@ -472,6 +478,10 @@ td {
 
   .hero-banner {
     min-height: 220px;
+  }
+
+  .sidebar-brand {
+    width: min(72vw, 190px);
   }
 }
 

@@ -178,7 +178,7 @@ export default function App() {
       <aside className="sidebar">
         <div>
           <div className="sidebar-brand">
-            <img className="sidebar-logo" src="/Logoname.png" alt="Sinergy Sol" />
+            <img className="sidebar-logo" src="/sinergysoldark.png" alt="Sinergy Sol" />
           </div>
           <p className="eyebrow">Ops Core</p>
           <p className="sidebar-copy">{session.user.name}</p>
