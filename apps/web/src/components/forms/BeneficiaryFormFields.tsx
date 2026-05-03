@@ -4,6 +4,7 @@ type CountryOption = {
   code: CountryCode;
   label: string;
   currency: string;
+  flag: string;
   summary: string;
   researchNote: string;
 };
@@ -20,6 +21,7 @@ export const beneficiaryCountryOptions: CountryOption[] = [
     code: "CO",
     label: "Colombia",
     currency: "COP",
+    flag: "/flags/co.svg",
     summary: "Account number, account type, ID, and the holder's phone number.",
     researchNote: "Local COP payouts commonly require bank name, account number, account type, ID information, and phone number.",
   },
@@ -27,6 +29,7 @@ export const beneficiaryCountryOptions: CountryOption[] = [
     code: "MX",
     label: "Mexico",
     currency: "MXN",
+    flag: "/flags/mx.svg",
     summary: "18-digit CLABE and the holder's core banking details.",
     researchNote: "SPEI transfers most commonly use an 18-digit CLABE together with the bank name and account holder.",
   },
@@ -34,6 +37,7 @@ export const beneficiaryCountryOptions: CountryOption[] = [
     code: "AR",
     label: "Argentina",
     currency: "ARS",
+    flag: "/flags/ar.svg",
     summary: "CBU, CVU, or alias plus CUIT/CUIL or DNI identification.",
     researchNote: "ARS payouts commonly request a CBU/CVU or alias together with beneficiary identification.",
   },
@@ -91,27 +95,62 @@ function updateField(form: CreateBeneficiaryDto, setForm: (next: CreateBeneficia
   setForm(next);
 }
 
-export function BeneficiaryFormFields({ form, setForm, projectOptions = [], compact = false }: BeneficiaryFormFieldsProps) {
-  const countryOption = getCountryOption(form.country);
-  const bankKeyLabel = form.country === "MX" ? "CLABE" : form.country === "AR" ? "Bank key" : "Bank detail";
-  const bankKeyPlaceholder =
-    form.country === "MX"
-      ? "18 digits"
-      : form.country === "AR"
-        ? form.bankKeyType === "ALIAS"
-          ? "Ex. my.alias.payments"
-          : "22 digits"
-        : "";
+function getBankKeyLabel(form: CreateBeneficiaryDto) {
+  return form.country === "MX" ? "CLABE" : form.country === "AR" ? "Bank key" : "Bank detail";
+}
 
+function getBankKeyPlaceholder(form: CreateBeneficiaryDto) {
+  return form.country === "MX"
+    ? "18 digits"
+    : form.country === "AR"
+      ? form.bankKeyType === "ALIAS"
+        ? "Ex. my.alias.payments"
+        : "22 digits"
+      : "";
+}
+
+export function getBeneficiaryChecklist(form: CreateBeneficiaryDto) {
+  const items = [
+    { label: "Full name", done: Boolean(form.name.trim()) },
+    { label: "Work email", done: Boolean(form.email.trim()) },
+    { label: "Worker type", done: Boolean(form.kind) },
+    { label: "Bank name", done: Boolean(form.bankName.trim()) },
+    { label: "Account holder", done: Boolean(form.accountHolderName.trim()) },
+  ];
+
+  if (form.country === "CO") {
+    items.push(
+      { label: "Phone number", done: Boolean(form.phoneNumber?.trim()) },
+      { label: "ID details", done: Boolean(form.documentType?.trim()) && Boolean(form.documentNumber?.trim()) },
+      { label: "Account setup", done: Boolean(form.accountType?.trim()) && Boolean(form.accountNumber?.trim()) },
+    );
+  }
+
+  if (form.country === "MX") {
+    items.push({ label: "CLABE", done: Boolean((form.bankKey ?? form.clabe ?? "").trim()) });
+  }
+
+  if (form.country === "AR") {
+    items.push(
+      { label: "Key type", done: Boolean(form.bankKeyType?.trim()) },
+      { label: "CBU/CVU/Alias", done: Boolean(form.bankKey?.trim()) },
+      { label: "ID details", done: Boolean(form.documentType?.trim()) && Boolean(form.documentNumber?.trim()) },
+    );
+  }
+
+  return items;
+}
+
+export function BeneficiaryIdentityFields({ form, setForm, projectOptions = [], compact = false }: BeneficiaryFormFieldsProps) {
   return (
     <div className={`form-grid beneficiary-form-grid ${compact ? "compact-person-form" : ""}`}>
       <label>
-        Name
-        <input value={form.name} onChange={(event) => updateField(form, setForm, "name", event.target.value)} />
+        Full name
+        <input value={form.name} placeholder="Ex. Camila Torres" onChange={(event) => updateField(form, setForm, "name", event.target.value)} />
       </label>
       <label>
-        Email
-        <input value={form.email} onChange={(event) => updateField(form, setForm, "email", event.target.value)} />
+        Work email
+        <input value={form.email} placeholder="name@company.com" onChange={(event) => updateField(form, setForm, "email", event.target.value)} />
       </label>
       <label>
         Project
@@ -126,7 +165,7 @@ export function BeneficiaryFormFields({ form, setForm, projectOptions = [], comp
             });
           }}
         >
-          <option value="">No project assigned</option>
+          <option value="">No project assigned yet</option>
           {projectOptions.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
@@ -135,26 +174,39 @@ export function BeneficiaryFormFields({ form, setForm, projectOptions = [], comp
         </select>
       </label>
       <label>
-        Type
+        Worker type
         <select value={form.kind} onChange={(event) => updateField(form, setForm, "kind", event.target.value)}>
           <option value="employee">Employee</option>
           <option value="contractor">Contractor</option>
         </select>
       </label>
       <label>
-        Bank
-        <input value={form.bankName} onChange={(event) => updateField(form, setForm, "bankName", event.target.value)} />
+        Bank name
+        <input value={form.bankName} placeholder="Receiving bank" onChange={(event) => updateField(form, setForm, "bankName", event.target.value)} />
       </label>
       <label>
         Account holder
-        <input value={form.accountHolderName} onChange={(event) => updateField(form, setForm, "accountHolderName", event.target.value)} />
+        <input
+          value={form.accountHolderName}
+          placeholder="Legal account holder name"
+          onChange={(event) => updateField(form, setForm, "accountHolderName", event.target.value)}
+        />
       </label>
+    </div>
+  );
+}
 
+export function BeneficiaryBankingFields({ form, setForm, compact = false }: Omit<BeneficiaryFormFieldsProps, "projectOptions">) {
+  const bankKeyLabel = getBankKeyLabel(form);
+  const bankKeyPlaceholder = getBankKeyPlaceholder(form);
+
+  return (
+    <div className={`form-grid beneficiary-form-grid ${compact ? "compact-person-form" : ""}`}>
       {form.country === "CO" ? (
         <>
           <label>
             Phone number
-            <input value={form.phoneNumber ?? ""} onChange={(event) => updateField(form, setForm, "phoneNumber", event.target.value)} />
+            <input placeholder="+57 300 123 4567" value={form.phoneNumber ?? ""} onChange={(event) => updateField(form, setForm, "phoneNumber", event.target.value)} />
           </label>
           <label>
             ID type
@@ -167,7 +219,7 @@ export function BeneficiaryFormFields({ form, setForm, projectOptions = [], comp
           </label>
           <label>
             ID number
-            <input value={form.documentNumber ?? ""} onChange={(event) => updateField(form, setForm, "documentNumber", event.target.value)} />
+            <input placeholder="Document number" value={form.documentNumber ?? ""} onChange={(event) => updateField(form, setForm, "documentNumber", event.target.value)} />
           </label>
           <label>
             Account type
@@ -178,7 +230,7 @@ export function BeneficiaryFormFields({ form, setForm, projectOptions = [], comp
           </label>
           <label>
             Account number
-            <input value={form.accountNumber ?? ""} onChange={(event) => updateField(form, setForm, "accountNumber", event.target.value)} />
+            <input placeholder="Bank account number" value={form.accountNumber ?? ""} onChange={(event) => updateField(form, setForm, "accountNumber", event.target.value)} />
           </label>
         </>
       ) : null}
@@ -222,11 +274,21 @@ export function BeneficiaryFormFields({ form, setForm, projectOptions = [], comp
           </label>
           <label>
             ID number
-            <input value={form.documentNumber ?? ""} onChange={(event) => updateField(form, setForm, "documentNumber", event.target.value)} />
+            <input placeholder="Tax or national ID number" value={form.documentNumber ?? ""} onChange={(event) => updateField(form, setForm, "documentNumber", event.target.value)} />
           </label>
         </>
       ) : null}
+    </div>
+  );
+}
 
+export function BeneficiaryFormFields({ form, setForm, projectOptions = [], compact = false }: BeneficiaryFormFieldsProps) {
+  const countryOption = getCountryOption(form.country);
+
+  return (
+    <div className="stack">
+      <BeneficiaryIdentityFields form={form} setForm={setForm} projectOptions={projectOptions} compact={compact} />
+      <BeneficiaryBankingFields form={form} setForm={setForm} compact={compact} />
       {!compact ? (
         <div className="beneficiary-country-note">
           <strong>{countryOption.label}</strong>

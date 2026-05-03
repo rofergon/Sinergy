@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import type { SessionState } from "../../hooks/useSession";
 import { navItems } from "../../constants/navigation";
 import { NavIcon } from "../icons";
@@ -22,6 +22,9 @@ function getInitials(name: string) {
 }
 
 export function AppLayout({ children, loading, message, session, onLogout }: AppLayoutProps) {
+  const location = useLocation();
+  const isMonitoring = location.pathname === "/";
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -40,21 +43,26 @@ export function AppLayout({ children, loading, message, session, onLogout }: App
         </nav>
         <button className="sidebar-profile" onClick={onLogout}>
           <span>{getInitials(session.user.name)}</span>
-          <strong>{session.user.name}</strong>
+          <span className="sidebar-profile-copy">
+            <strong>{session.user.name}</strong>
+            <small>{session.user.role.replace(/_/g, " ")}</small>
+          </span>
           <i />
         </button>
       </aside>
       <main className="main-panel">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Operations Workspace</p>
-            <h1>Funded projects to pay talent in Colombia and Mexico</h1>
-          </div>
-          <div className="status-box">
-            <span className="dot live" />
-            {loading ? "Syncing" : "Ready"}
-          </div>
-        </header>
+        {!isMonitoring ? (
+          <header className="topbar">
+            <div>
+              <p className="eyebrow">Operations Workspace</p>
+              <h1>Funded projects to pay talent in Colombia and Mexico</h1>
+            </div>
+            <div className="status-box">
+              <span className="dot live" />
+              {loading ? "Syncing" : "Ready"}
+            </div>
+          </header>
+        ) : null}
 
         {message && message !== "Failed to fetch" ? <div className="banner">{message}</div> : null}
 

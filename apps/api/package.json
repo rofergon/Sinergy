@@ -12,6 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:push:localnet": "node ./scripts/run-with-env.mjs .env .env.localnet -- pnpm exec prisma db push",
+    "seed:operations": "node ./scripts/seed-operations.mjs",
+    "seed:operations:localnet": "node ./scripts/run-with-env.mjs .env .env.localnet -- node ./scripts/seed-operations.mjs",
     "localnet:setup": "node ./scripts/setup-localnet.mjs",
     "localnet:smoke": "node ./scripts/smoke-localnet.mjs",
     "localnet:e2e": "bash ./scripts/run-localnet-smoke.sh",

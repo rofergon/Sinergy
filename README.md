@@ -53,7 +53,15 @@ pnpm install
 pnpm --filter @latam-payouts/api prisma:push
 ```
 
-6. Run the workspace:
+6. Optional: seed PostgreSQL with valid demo operations in multiple states:
+
+```bash
+pnpm --filter @latam-payouts/api seed:operations
+```
+
+The seed is idempotent for its own `seed_*` records and creates examples for Colombia, Mexico, and Argentina across approval, funding, dispatching, completed, failed, and review states.
+
+7. Run the workspace:
 
 ```bash
 pnpm dev
