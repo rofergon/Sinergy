@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@latam-payouts/contracts": "workspace:*",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0"
@@ -23,4 +25,3 @@
     "vite": "^5.4.10"
   }
 }
-

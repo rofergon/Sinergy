@@ -12,12 +12,12 @@ export class SolanaFundingGateway {
   private readonly connection = new Connection(this.getRpcUrl(), "confirmed");
 
   getCluster(): FundingCluster {
-    const configuredCluster = (process.env.SOLANA_CLUSTER ?? "devnet") as FundingCluster;
+    const configuredCluster = (process.env.SOLANA_CLUSTER ?? "testnet") as FundingCluster;
     return configuredCluster;
   }
 
   getRpcUrl(): string {
-    return process.env.SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
+    return process.env.SOLANA_RPC_URL ?? "https://api.testnet.solana.com";
   }
 
   getTokenMint(): string {

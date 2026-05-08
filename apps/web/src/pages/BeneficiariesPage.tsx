@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { CountryCode, CreateBeneficiaryDto } from "@latam-payouts/contracts";
 import { MetricIcon } from "../components/icons";
 import {
@@ -15,7 +16,7 @@ type BeneficiariesPageProps = {
   data: BootstrapPayload | null;
   form: CreateBeneficiaryDto;
   setForm: (next: CreateBeneficiaryDto) => void;
-  onCreate: () => void;
+  onCreate: () => Promise<Beneficiary | undefined>;
 };
 
 type CountryFilter = "ALL" | CountryCode;
@@ -48,10 +49,12 @@ function downloadBeneficiaryRecord(beneficiary: Beneficiary, history: Array<Reco
 }
 
 export function BeneficiariesPage({ data, form, setForm, onCreate }: BeneficiariesPageProps) {
+  const navigate = useNavigate();
   const [countryFilter, setCountryFilter] = useState<CountryFilter>("ALL");
   const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string | null>(null);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [createdEmployeeName, setCreatedEmployeeName] = useState("");
 
   const beneficiaries = data?.beneficiaries ?? [];
   const batches = data?.batches ?? [];
@@ -104,6 +107,15 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }, [batches, payouts, selectedBeneficiary]);
 
+  async function handleCreateEmployee() {
+    const created = await onCreate();
+    if (created) {
+      setCreatedEmployeeName(created.name);
+      setSelectedBeneficiaryId(created.id);
+      setIsOnboardingOpen(false);
+    }
+  }
+
   return (
     <section className="operations-page beneficiaries-page people-directory-page">
       <div className="people-directory-hero">
@@ -149,6 +161,18 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
           <MetricIcon name="search" className="control-icon" />
         </label>
       </div>
+
+      {createdEmployeeName ? (
+        <div className="next-workflow-banner">
+          <div>
+            <strong>{createdEmployeeName} is ready for a payment project.</strong>
+            <span>Create or update a project to add local payout amounts, quote USDC funding, and start the approval flow.</span>
+          </div>
+          <button className="primary" onClick={() => navigate("/batches")}>
+            Create payment project
+          </button>
+        </div>
+      ) : null}
 
       {isOnboardingOpen ? (
         <article className="panel ops-panel beneficiary-form-panel onboarding-main-panel">
@@ -240,7 +264,7 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
               </div>
 
               <div className="onboarding-submit">
-                <button className="primary" onClick={onCreate} disabled={!isReadyToCreate}>
+                <button className="primary" onClick={() => void handleCreateEmployee()} disabled={!isReadyToCreate}>
                   Create employee
                 </button>
                 <span className="helper">

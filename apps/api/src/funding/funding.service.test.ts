@@ -163,6 +163,7 @@ describe("FundingService", () => {
       getCompany: vi.fn(() => ({ authorizedWallets: ["wallet-1"] })),
       getDefaultUser: vi.fn(() => actor),
       applyFundingStatus: vi.fn(),
+      autoDispatchFundedPayouts: vi.fn(),
       getBatch: vi.fn(() => ({ id: "batch-1", totalFundingUsdc: 100, status: "approved" })),
       markBatchAwaitingFunding: vi.fn(),
     };
@@ -196,6 +197,7 @@ describe("FundingService", () => {
     expect(persistence.instruction.status).toBe("reconciled");
     expect(persistence.instruction.latestSignature).toBe("sig-valid");
     expect(domain.applyFundingStatus).toHaveBeenCalledWith("batch-1", "reconciled");
+    expect(domain.autoDispatchFundedPayouts).toHaveBeenCalledWith(actor, "batch-1");
   });
 
   it("opens an exception when funding comes from an unauthorized wallet", async () => {
@@ -276,6 +278,7 @@ describe("FundingService", () => {
     expect(persistence.instruction.status).toBe("partial");
     expect(persistence.exceptions[0]?.type).toBe("funding_incomplete");
     expect(domain.applyFundingStatus).toHaveBeenCalledWith("batch-1", "partial");
+    expect(domain.autoDispatchFundedPayouts).not.toHaveBeenCalled();
   });
 
   it("ignores duplicate signatures during rescans", async () => {
@@ -296,5 +299,19 @@ describe("FundingService", () => {
     await service.rescanFundingInstruction(actor, "instruction-1");
 
     expect(persistence.transactions).toHaveLength(1);
+    expect(domain.autoDispatchFundedPayouts).toHaveBeenCalledTimes(1);
+  });
+
+  it("auto-dispatches when manual funding completes the expected amount", async () => {
+    const service = new FundingService(persistence as never, gateway as never, domain as never);
+    await service.recordManualFunding(actor, {
+      fundingInstructionId: "instruction-1",
+      txHash: "manual-complete",
+      amountReceived: 100,
+    });
+
+    expect(persistence.instruction.status).toBe("reconciled");
+    expect(domain.applyFundingStatus).toHaveBeenCalledWith("batch-1", "reconciled");
+    expect(domain.autoDispatchFundedPayouts).toHaveBeenCalledWith(actor, "batch-1");
   });
 });

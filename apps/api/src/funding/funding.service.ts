@@ -242,6 +242,9 @@ export class FundingService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.domain.applyFundingStatus(instruction.batchId, validation.nextStatus);
+    if (validation.nextStatus === "reconciled" && previousStatus !== "reconciled") {
+      this.domain.autoDispatchFundedPayouts(actor, instruction.batchId);
+    }
 
     if (validation.nextStatus === "partial") {
       await this.persistence.createOrRefreshException({

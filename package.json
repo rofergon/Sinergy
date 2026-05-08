@@ -9,6 +9,7 @@
     "stack:restart": "bash ./scripts/restart-stack.sh",
     "localnet:validator": "solana-test-validator --ledger apps/api/.localnet/ledger --reset",
     "localnet:setup": "pnpm --filter @latam-payouts/api localnet:setup",
+    "testnet:setup": "pnpm --filter @latam-payouts/api testnet:setup",
     "localnet:dbpush": "pnpm --filter @latam-payouts/api prisma:push:localnet",
     "localnet:smoke": "pnpm --filter @latam-payouts/api localnet:smoke",
     "localnet:e2e": "pnpm --filter @latam-payouts/api localnet:e2e",

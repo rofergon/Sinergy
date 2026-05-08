@@ -69,12 +69,48 @@ pnpm dev
 
 ## Onchain funding setup
 
-The MVP now includes a real `funding + reconciliation` layer for `USDC on Solana Devnet`.
+The MVP now includes a real `funding + reconciliation` layer for `USDC on Solana`. Testnet is the default external cluster; localnet remains the fastest development loop.
 
 - `GET /batches/:id/funding-instructions` generates a persistent funding instruction with treasury wallet, treasury ATA, mint, reference, memo, and expected amount.
 - The API polls Solana for transfers that include the batch `reference` and reconcile accepted deposits into the batch state.
 - `POST /funding/instructions/:id/rescan` lets ops manually trigger a reconciliation pass.
 - `POST /funding/transactions` remains available as a manual fallback for demos and support flows.
+
+## Testnet mock USDC workflow
+
+Use this when you want to fund from a browser wallet and let the backend verify the transfer automatically.
+
+1. Create a private local env from the example:
+
+```bash
+cp apps/api/.env.testnet.example apps/api/.env.testnet
+```
+
+2. Set `TESTNET_DEPLOYER_KEYPAIR` in `apps/api/.env.testnet` to a local Solana CLI keypair path. Do not commit this file. The keypair pays for creating the mock USDC mint and token accounts on testnet. If you want your browser wallet to sign the funding transfer, set `TESTNET_COMPANY_WALLET` to that wallet public key.
+
+3. Bootstrap testnet mock USDC:
+
+```bash
+pnpm testnet:setup
+```
+
+This creates or reuses a mock USDC mint, creates the treasury token account, mints mock USDC to the authorized company wallet, and writes `apps/api/.env.testnet`.
+
+4. Run the API with testnet env values loaded:
+
+```bash
+pnpm --filter @latam-payouts/api dev:testnet
+```
+
+5. Run the web app and make sure `apps/web/.env` or `.env.local` has:
+
+```bash
+VITE_API_URL=http://localhost:4000
+VITE_SOLANA_RPC_URL=https://api.testnet.solana.com
+VITE_SOLANA_USDC_DECIMALS=6
+```
+
+6. In the Funding tab, connect the whitelisted wallet and click `Fund ... USDC`. The frontend builds an SPL token transfer to the treasury ATA and includes the project `reference` account. After confirmation, the backend `Refresh funding`/watcher verifies mint, destination, reference, and whether the signer wallet is whitelisted.
 
 ## Localnet-first workflow
 

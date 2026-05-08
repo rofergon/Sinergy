@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nest start --watch",
     "dev:localnet": "node ./scripts/run-with-env.mjs .env .env.localnet -- pnpm exec nest start --watch",
+    "dev:testnet": "node ./scripts/run-with-env.mjs .env .env.testnet -- pnpm exec nest start --watch",
     "build": "nest build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
@@ -15,6 +16,7 @@
     "seed:operations": "node ./scripts/seed-operations.mjs",
     "seed:operations:localnet": "node ./scripts/run-with-env.mjs .env .env.localnet -- node ./scripts/seed-operations.mjs",
     "localnet:setup": "node ./scripts/setup-localnet.mjs",
+    "testnet:setup": "node ./scripts/setup-testnet.mjs",
     "localnet:smoke": "node ./scripts/smoke-localnet.mjs",
     "localnet:e2e": "bash ./scripts/run-localnet-smoke.sh",
     "test": "vitest run"

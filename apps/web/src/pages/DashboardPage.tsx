@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { CountryCode } from "@latam-payouts/contracts";
 import type { Batch, BootstrapPayload, ExceptionCase, Payout } from "../lib/api";
 import { MetricIcon } from "../components/icons";
@@ -87,6 +88,7 @@ function getOperationAmount(batch: Batch, projectPayouts: Payout[], country: Cou
 }
 
 export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
+  const navigate = useNavigate();
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>("CO");
   const [search, setSearch] = useState("");
   const batches = data?.batches ?? [];
@@ -267,13 +269,9 @@ export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
                 <input value={search} placeholder="Search operations..." onChange={(event) => setSearch(event.target.value)} />
                 <MetricIcon name="search" className="control-icon" />
               </label>
-              <button type="button" className="tool-button">
-                <MetricIcon name="filter" className="control-icon" />
-                Filters
-              </button>
-              <button type="button" className="tool-button">
-                <MetricIcon name="download" className="control-icon" />
-                Export
+              <button type="button" className="tool-button" onClick={() => navigate("/batches")}>
+                <MetricIcon name="document" className="control-icon" />
+                View projects
               </button>
             </div>
           </div>
@@ -294,7 +292,7 @@ export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
               </thead>
               <tbody>
                 {operations.map((operation) => (
-                  <tr key={operation.batch.id}>
+                  <tr key={operation.batch.id} onClick={() => navigate(`/batches?batch=${operation.batch.id}`)}>
                     <td>
                       <strong>{operation.batch.name}</strong>
                       <span className="cell-subtext">OP-{operation.batch.id.toUpperCase().slice(0, 12)}</span>
@@ -316,7 +314,15 @@ export function DashboardPage({ data }: { data: BootstrapPayload | null }) {
                     <td className={operation.exceptions ? "danger-text" : ""}>{operation.exceptions}</td>
                     <td>{operation.amount}</td>
                     <td>
-                      <button className="row-menu" type="button" aria-label={`Actions for ${operation.batch.name}`}>
+                      <button
+                        className="row-menu"
+                        type="button"
+                        aria-label={`Open ${operation.batch.name}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/batches?batch=${operation.batch.id}`);
+                        }}
+                      >
                         <MetricIcon name="kebab" className="control-icon" />
                       </button>
                     </td>

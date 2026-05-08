@@ -10,12 +10,14 @@ coverage
 .env.localnet
 apps/api/.env
 apps/api/.env.localnet
+apps/api/.env.testnet
 apps/web/.env
 
 # Local databases and generated state
 apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
 apps/api/.localnet
+apps/api/.testnet
 
 # Logs
 *.log

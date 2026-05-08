@@ -44,7 +44,7 @@ export function LoginScreen({ form, loading, message, onFormChange, onLogin }: L
             <button className="primary" onClick={onLogin} disabled={loading}>
               {loading ? "Signing in..." : "Enter workspace"}
             </button>
-            <p className="helper">Demo users: finance, approver, compliance. Password: demo123</p>
+            <p className="helper">Demo users: finance, approver, compliance, admin. Password: demo123. Project approval requires approver or admin.</p>
             {message ? <p className="message">{message}</p> : null}
           </div>
         </div>

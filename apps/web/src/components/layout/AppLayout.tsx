@@ -24,6 +24,7 @@ function getInitials(name: string) {
 export function AppLayout({ children, loading, message, session, onLogout }: AppLayoutProps) {
   const location = useLocation();
   const isMonitoring = location.pathname === "/";
+  const showTopbar = !isMonitoring && location.pathname !== "/beneficiaries";
 
   return (
     <div className="app-shell">
@@ -51,11 +52,11 @@ export function AppLayout({ children, loading, message, session, onLogout }: App
         </button>
       </aside>
       <main className="main-panel">
-        {!isMonitoring ? (
+        {showTopbar ? (
           <header className="topbar">
             <div>
               <p className="eyebrow">Operations Workspace</p>
-              <h1>Funded projects to pay talent in Colombia and Mexico</h1>
+              <h1>Funded projects to pay talent in LATAM</h1>
             </div>
             <div className="status-box">
               <span className="dot live" />

@@ -1,5 +1,5 @@
 import type { CreateBatchDto, CreateBeneficiaryDto, UpdatePayoutDto } from "@latam-payouts/contracts";
-import { api, type BatchDetail } from "../lib/api";
+import { api, type BatchDetail, type Beneficiary } from "../lib/api";
 import type { SessionState } from "./useSession";
 
 type WorkspaceActionOptions = {
@@ -19,15 +19,16 @@ export function useOperationsActions({
   setSelectedBatch,
   refreshWorkspace,
 }: WorkspaceActionOptions) {
-  async function runAction(action: () => Promise<void>, successMessage: string) {
+  async function runAction<T>(action: () => Promise<T>, successMessage: string): Promise<T | undefined> {
     if (!session) {
       return;
     }
     setLoading(true);
     try {
-      await action();
+      const result = await action();
       await refreshWorkspace(session.accessToken);
       setMessage(successMessage);
+      return result;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The action could not be completed.");
     } finally {
@@ -37,24 +38,26 @@ export function useOperationsActions({
 
   return {
     saveCompany(payload: { displayName: string; webhookUrl: string; authorizedWallets: string[] }) {
-      void runAction(() => api.updateCompany(session!.accessToken, payload).then(() => Promise.resolve()), "Company settings updated.");
+      void runAction(() => api.updateCompany(session!.accessToken, payload), "Company settings updated.");
     },
-    createBeneficiary(form: CreateBeneficiaryDto) {
-      void runAction(() => api.createBeneficiary(session!.accessToken, form).then(() => Promise.resolve()), "Beneficiary created.");
+    createBeneficiary(form: CreateBeneficiaryDto): Promise<Beneficiary | undefined> {
+      return runAction(() => api.createBeneficiary(session!.accessToken, form), "Beneficiary created.");
     },
     updateBeneficiary(id: string, form: Partial<CreateBeneficiaryDto>) {
-      void runAction(() => api.updateBeneficiary(session!.accessToken, id, form).then(() => Promise.resolve()), "Beneficiary updated.");
+      void runAction(() => api.updateBeneficiary(session!.accessToken, id, form), "Beneficiary updated.");
     },
-    createBatch(form: CreateBatchDto) {
-      void runAction(async () => {
+    createBatch(form: CreateBatchDto): Promise<BatchDetail | undefined> {
+      return runAction(async () => {
         const detail = await api.createBatch(session!.accessToken, form);
         setSelectedBatch(detail);
+        return detail;
       }, "Batch created.");
     },
-    importBatch(name: string, csv: string) {
-      void runAction(async () => {
+    importBatch(name: string, csv: string): Promise<BatchDetail | undefined> {
+      return runAction(async () => {
         const detail = await api.importBatch(session!.accessToken, `${name} import`, csv);
         setSelectedBatch(detail);
+        return detail;
       }, "CSV batch imported.");
     },
     createQuote(batchId: string) {
@@ -62,12 +65,14 @@ export function useOperationsActions({
         await api.createQuote(session!.accessToken, batchId);
         const detail = await api.getBatch(session!.accessToken, batchId);
         setSelectedBatch(detail);
+        return detail;
       }, "Quote generated.");
     },
     approveBatch(batchId: string) {
       void runAction(async () => {
         const detail = await api.approveBatch(session!.accessToken, batchId, "Approved in console");
         setSelectedBatch(detail);
+        return detail;
       }, "Batch approved.");
     },
     generateFunding(batchId: string) {
@@ -75,6 +80,7 @@ export function useOperationsActions({
         await api.getFundingInstructions(session!.accessToken, batchId);
         const detail = await api.getBatch(session!.accessToken, batchId);
         setSelectedBatch(detail);
+        return detail;
       }, "Funding instructions generated.");
     },
     refreshFunding(instructionId: string) {
@@ -83,20 +89,24 @@ export function useOperationsActions({
         if (selectedBatch) {
           const detail = await api.getBatch(session!.accessToken, selectedBatch.batch.id);
           setSelectedBatch(detail);
+          return detail;
         }
+        return undefined;
       }, "Funding status refreshed.");
     },
-    recordFallbackFunding(instructionId: string, amount: number) {
-      void runAction(async () => {
+    recordFallbackFunding(instructionId: string, payload: { txHash: string; amountReceived: number }) {
+      return runAction(async () => {
         await api.recordFunding(session!.accessToken, {
           fundingInstructionId: instructionId,
-          txHash: `MANUAL-FUNDING-${Date.now()}`,
-          amountReceived: amount,
+          txHash: payload.txHash,
+          amountReceived: payload.amountReceived,
         });
         if (selectedBatch) {
           const detail = await api.getBatch(session!.accessToken, selectedBatch.batch.id);
           setSelectedBatch(detail);
+          return detail;
         }
+        return undefined;
       }, "Manual funding fallback recorded.");
     },
     dispatchPayout(payoutId: string) {
@@ -105,7 +115,9 @@ export function useOperationsActions({
         if (selectedBatch) {
           const detail = await api.getBatch(session!.accessToken, selectedBatch.batch.id);
           setSelectedBatch(detail);
+          return detail;
         }
+        return undefined;
       }, "Payout dispatched.");
     },
     updatePayout(payoutId: string, body: UpdatePayoutDto) {
@@ -114,23 +126,23 @@ export function useOperationsActions({
         if (selectedBatch) {
           const detail = await api.getBatch(session!.accessToken, selectedBatch.batch.id);
           setSelectedBatch(detail);
+          return detail;
         }
+        return undefined;
       }, "Person payment updated.");
     },
     sendApprovedPayouts(batchId: string) {
       void runAction(async () => {
         const detail = await api.sendApprovedPayouts(session!.accessToken, batchId);
         setSelectedBatch(detail);
+        return detail;
       }, "Approved payments sent.");
     },
     resolveException(exceptionId: string) {
-      void runAction(() => api.resolveException(session!.accessToken, exceptionId).then(() => Promise.resolve()), "Exception resolved.");
+      void runAction(() => api.resolveException(session!.accessToken, exceptionId), "Exception resolved.");
     },
     resolveCompliance(caseId: string) {
-      void runAction(
-        () => api.resolveComplianceCase(session!.accessToken, caseId).then(() => Promise.resolve()),
-        "Compliance case resolved.",
-      );
+      void runAction(() => api.resolveComplianceCase(session!.accessToken, caseId), "Compliance case resolved.");
     },
   };
 }

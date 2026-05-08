@@ -473,6 +473,23 @@ export class DemoDomainService {
     return batch;
   }
 
+  autoDispatchFundedPayouts(user: SessionUser, batchId: string): BatchDetail {
+    const payablePayouts = this.payouts.filter(
+      (item) => item.batchId === batchId && item.approvalStatus === "approved" && item.status === "funded",
+    );
+
+    if (!payablePayouts.length) {
+      return this.getBatchDetail(batchId);
+    }
+
+    for (const payout of payablePayouts) {
+      this.dispatchPayout(user, payout.id);
+    }
+
+    this.logAudit("batch", batchId, "project.auto_dispatch", user, { payoutCount: payablePayouts.length });
+    return this.getBatchDetail(batchId);
+  }
+
   createQuote(user: SessionUser, batchId: string): Quote {
     const batch = this.requireBatch(batchId);
     const payouts = this.payouts.filter((item) => item.batchId === batchId);

@@ -100,18 +100,17 @@ export default function App() {
           element={
             <BatchesPage
               data={data}
+              session={session.user}
               selectedBatch={selectedBatch}
               batchForm={batchForm}
               setBatchForm={setBatchForm}
               csvImport={csvImport}
               setCsvImport={setCsvImport}
               openBatch={(batchId) => void openBatch(batchId)}
+              onRefreshProjects={() => refreshWorkspace(session.accessToken)}
+              onClearSelection={() => setSelectedBatch(null)}
               onCreateBatch={() => actions.createBatch(batchForm)}
               onImportBatch={() => actions.importBatch(batchForm.name, csvImport)}
-              personForm={beneficiaryForm}
-              setPersonForm={setBeneficiaryForm}
-              onCreatePerson={() => actions.createBeneficiary(beneficiaryForm)}
-              onUpdatePerson={actions.updateBeneficiary}
               onUpdatePayout={actions.updatePayout}
               onQuote={actions.createQuote}
               onApprove={actions.approveBatch}
