@@ -31,6 +31,7 @@ yarn-error.log*
 # Package manager artifacts we do not use in this repo
 package-lock.json
 yarn.lock
+pnpm
+latam-payouts-mvp@0.1.0
 
 .DS_Store
-pnpm-lock.yaml
