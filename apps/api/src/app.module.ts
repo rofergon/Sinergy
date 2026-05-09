@@ -19,6 +19,7 @@ import { FundingPersistenceService } from "./funding/funding.persistence.service
 import { MemoryFundingPersistenceService } from "./funding/memory-funding.persistence.service.js";
 import { SolanaFundingGateway } from "./funding/solana-funding.gateway.js";
 import { FundingService } from "./funding/funding.service.js";
+import { HealthController } from "./health/health.controller.js";
 
 const useMemoryFundingPersistence = process.env.FUNDING_PERSISTENCE_MODE === "memory";
 
@@ -37,6 +38,7 @@ const useMemoryFundingPersistence = process.env.FUNDING_PERSISTENCE_MODE === "me
     ReportsController,
     AuditController,
     WebhooksController,
+    HealthController,
   ],
   providers: [
     DemoDomainService,

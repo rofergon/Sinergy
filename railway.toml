@@ -1,0 +1,19 @@
+[build]
+builder = "RAILPACK"
+buildCommand = "pnpm --filter @latam-payouts/api deploy:build"
+watchPatterns = [
+  "apps/api/**",
+  "packages/contracts/**",
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "tsconfig.base.json"
+]
+
+[deploy]
+preDeployCommand = "pnpm --filter @latam-payouts/api deploy:prepare"
+startCommand = "pnpm --filter @latam-payouts/api start"
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
