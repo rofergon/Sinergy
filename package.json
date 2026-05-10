@@ -10,6 +10,7 @@
     "localnet:validator": "solana-test-validator --ledger apps/api/.localnet/ledger --reset",
     "localnet:setup": "pnpm --filter @latam-payouts/api localnet:setup",
     "testnet:setup": "pnpm --filter @latam-payouts/api testnet:setup",
+    "demo:reset": "pnpm --filter @latam-payouts/api demo:reset",
     "localnet:dbpush": "pnpm --filter @latam-payouts/api prisma:push:localnet",
     "localnet:smoke": "pnpm --filter @latam-payouts/api localnet:smoke",
     "localnet:e2e": "pnpm --filter @latam-payouts/api localnet:e2e",

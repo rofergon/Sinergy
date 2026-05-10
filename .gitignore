@@ -16,6 +16,7 @@ apps/web/.env
 # Local databases and generated state
 apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
+apps/api/.demo-state
 apps/api/.localnet
 apps/api/.testnet
 

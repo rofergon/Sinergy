@@ -22,7 +22,7 @@ export function LoginScreen({ form, loading, message, onFormChange, onLogin }: L
             </span>
           </div>
           <div className="hero-copy">
-            <p className="eyebrow">Global Payroll Payouts</p>
+            <p className="eyebrow">Global payroll payouts</p>
             <h1>Login to console</h1>
             <div className="login-rule" />
             <p className="lede">Access your Sinergy Sol workspace to manage payouts, approvals, and funding workflows.</p>
@@ -63,9 +63,9 @@ export function LoginScreen({ form, loading, message, onFormChange, onLogin }: L
                 <span className="demo-field-label">Work email</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4 6h16v12H4z" />
-                  <path d="m4 7 8 6 8-6" />
+                  <path d="m4 8 8 5 8-5" />
                 </svg>
-                <input aria-label="Work email" defaultValue="work@email.com" />
+                <input placeholder="work@email.com" />
               </label>
 
               <button className="demo-button" type="button">
@@ -76,28 +76,28 @@ export function LoginScreen({ form, loading, message, onFormChange, onLogin }: L
                 </svg>
               </button>
 
-              <div className="demo-proof-row" aria-label="Demo highlights">
+              <div className="demo-proof-row" aria-label="Platform highlights">
                 <div>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 3 5 6v5c0 4.2 2.8 7.7 7 9 4.2-1.3 7-4.8 7-9V6z" />
+                    <path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" />
                     <path d="m9 12 2 2 4-5" />
                   </svg>
-                  <span>Secure<br />by design</span>
+                  <span>Secure by design</span>
                 </div>
                 <div>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" />
                     <path d="M3 12h18" />
-                    <path d="M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21" />
-                    <path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9S9.6 18.5 12 21" />
+                    <path d="M12 3c2.4 2.5 3.5 5.5 3.5 9S14.4 18.5 12 21" />
+                    <path d="M12 3c-2.4 2.5-3.5 5.5-3.5 9S9.6 18.5 12 21" />
                   </svg>
-                  <span>Global<br />reach</span>
+                  <span>Global reach</span>
                 </div>
                 <div>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M13 2 5 14h6l-1 8 9-13h-6z" />
+                    <path d="M13 2 4 14h7l-1 8 10-13h-7z" />
                   </svg>
-                  <span>Built<br />for scale</span>
+                  <span>Built for scale</span>
                 </div>
               </div>
             </div>

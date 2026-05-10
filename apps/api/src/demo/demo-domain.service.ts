@@ -26,8 +26,25 @@ import {
   type WebhookEvent,
 } from "@latam-payouts/contracts";
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 type DemoUserRecord = SessionUser & { password: string };
+type DemoDomainSnapshot = {
+  company: Company;
+  beneficiaries: Beneficiary[];
+  batches: Batch[];
+  payouts: Payout[];
+  quotes: Quote[];
+  fundingInstructions: FundingInstruction[];
+  fundingTransactions: FundingTransaction[];
+  approvalDecisions: ApprovalDecision[];
+  complianceCases: ComplianceCase[];
+  ledgerEntries: LedgerEntry[];
+  webhookEvents: WebhookEvent[];
+  auditLogs: AuditLog[];
+  exceptions: ExceptionCase[];
+};
 
 @Injectable()
 export class DemoDomainService {
@@ -161,43 +178,141 @@ export class DemoDomainService {
       validationStatus: "valid",
       createdAt: new Date().toISOString(),
     },
+    {
+      id: "ben_co_002",
+      companyId: "company_acme",
+      name: "Mateo Gomez",
+      email: "mateo@example.co",
+      projectId: "batch_co_payroll_q2",
+      projectName: "Payroll Colombia Q2",
+      country: "CO",
+      currency: "COP",
+      kind: "employee",
+      bankName: "Davivienda",
+      accountHolderName: "Mateo Gomez",
+      phoneNumber: "+573104445566",
+      accountNumber: "4488123001",
+      accountType: "checking",
+      documentType: "CC",
+      documentNumber: "1018456702",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "ben_co_003",
+      companyId: "company_acme",
+      name: "Valentina Torres",
+      email: "valentina@example.co",
+      projectId: "batch_co_payroll_q2",
+      projectName: "Payroll Colombia Q2",
+      country: "CO",
+      currency: "COP",
+      kind: "contractor",
+      bankName: "Banco de Bogota",
+      accountHolderName: "Valentina Torres",
+      phoneNumber: "+573155557788",
+      accountNumber: "0098723415",
+      accountType: "savings",
+      documentType: "CC",
+      documentNumber: "1098765431",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "ben_mx_002",
+      companyId: "company_acme",
+      name: "Ana Martinez",
+      email: "ana@example.mx",
+      projectId: "batch_mx_ops_apr",
+      projectName: "Operaciones Mexico Abril",
+      country: "MX",
+      currency: "MXN",
+      kind: "employee",
+      bankName: "Santander Mexico",
+      accountHolderName: "Ana Martinez",
+      bankKey: "014180012345678901",
+      bankKeyType: "CLABE",
+      clabe: "014180012345678901",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "ben_mx_003",
+      companyId: "company_acme",
+      name: "Diego Ramirez",
+      email: "diego@example.mx",
+      projectId: "batch_mx_ops_apr",
+      projectName: "Operaciones Mexico Abril",
+      country: "MX",
+      currency: "MXN",
+      kind: "contractor",
+      bankName: "Banorte",
+      accountHolderName: "Diego Ramirez",
+      bankKey: "072580012345678902",
+      bankKeyType: "CLABE",
+      clabe: "072580012345678902",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "ben_mx_004",
+      companyId: "company_acme",
+      name: "Mariana Cruz",
+      email: "mariana@example.mx",
+      projectId: "batch_mx_ops_apr",
+      projectName: "Operaciones Mexico Abril",
+      country: "MX",
+      currency: "MXN",
+      kind: "employee",
+      bankName: "HSBC Mexico",
+      accountHolderName: "Mariana Cruz",
+      bankKey: "021180012345678903",
+      bankKeyType: "CLABE",
+      clabe: "021180012345678903",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "ben_ar_002",
+      companyId: "company_acme",
+      name: "Lucas Fernandez",
+      email: "lucas@example.ar",
+      projectId: "batch_ar_talent_may",
+      projectName: "Talent Argentina Mayo",
+      country: "AR",
+      currency: "ARS",
+      kind: "employee",
+      bankName: "Banco Macro",
+      accountHolderName: "Lucas Fernandez",
+      bankKey: "2850590940090418135202",
+      bankKeyType: "CBU",
+      documentType: "CUIT",
+      documentNumber: "20-30987654-2",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "ben_ar_003",
+      companyId: "company_acme",
+      name: "Martina Castro",
+      email: "martina@example.ar",
+      projectId: "batch_ar_talent_may",
+      projectName: "Talent Argentina Mayo",
+      country: "AR",
+      currency: "ARS",
+      kind: "contractor",
+      bankName: "BBVA Argentina",
+      accountHolderName: "Martina Castro",
+      bankKey: "2850590940090418135203",
+      bankKeyType: "CBU",
+      documentType: "CUIT",
+      documentNumber: "27-30456789-3",
+      validationStatus: "valid",
+      createdAt: new Date().toISOString(),
+    },
   ];
 
-  private batches: Batch[] = [
-    {
-      id: "batch_co_payroll_q2",
-      companyId: "company_acme",
-      name: "Payroll Colombia Q2",
-      createdByUserId: "user_finance",
-      status: "draft",
-      payoutIds: [],
-      totalLocal: 0,
-      totalFundingUsdc: 0,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "batch_mx_ops_apr",
-      companyId: "company_acme",
-      name: "Operaciones Mexico Abril",
-      createdByUserId: "user_finance",
-      status: "draft",
-      payoutIds: [],
-      totalLocal: 0,
-      totalFundingUsdc: 0,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "batch_ar_talent_may",
-      companyId: "company_acme",
-      name: "Talent Argentina Mayo",
-      createdByUserId: "user_finance",
-      status: "draft",
-      payoutIds: [],
-      totalLocal: 0,
-      totalFundingUsdc: 0,
-      createdAt: new Date().toISOString(),
-    },
-  ];
+  private batches: Batch[] = [];
   private payouts: Payout[] = [];
   private quotes: Quote[] = [];
   private fundingInstructions: FundingInstruction[] = [];
@@ -208,9 +323,12 @@ export class DemoDomainService {
   private webhookEvents: WebhookEvent[] = [];
   private auditLogs: AuditLog[] = [];
   private exceptions: ExceptionCase[] = [];
+  private readonly stateFilePath = resolve(process.env.DEMO_STATE_FILE ?? ".demo-state/operations-state.json");
 
   constructor() {
-    this.seedDemoBatch();
+    if (!this.loadState()) {
+      this.saveState();
+    }
   }
 
   login(email: string, password: string): AuthResponse {
@@ -434,6 +552,7 @@ export class DemoDomainService {
       .forEach((payout) => {
         payout.status = "awaiting_funding";
       });
+    this.saveState();
     return batch;
   }
 
@@ -1050,6 +1169,7 @@ export class DemoDomainService {
       ...input,
     };
     this.exceptions = [entry, ...this.exceptions];
+    this.saveState();
   }
 
   private recordWebhook(
@@ -1069,6 +1189,7 @@ export class DemoDomainService {
       },
       ...this.webhookEvents,
     ];
+    this.saveState();
   }
 
   private requireBeneficiary(id: string): Beneficiary {
@@ -1124,6 +1245,57 @@ export class DemoDomainService {
       },
       ...this.auditLogs,
     ];
+    this.saveState();
+  }
+
+  private loadState(): boolean {
+    if (!existsSync(this.stateFilePath)) {
+      return false;
+    }
+
+    try {
+      const snapshot = JSON.parse(readFileSync(this.stateFilePath, "utf8")) as Partial<DemoDomainSnapshot>;
+      if (snapshot.company) {
+        Object.assign(this.company, snapshot.company);
+      }
+      this.beneficiaries = snapshot.beneficiaries ?? this.beneficiaries;
+      this.batches = snapshot.batches ?? this.batches;
+      this.payouts = snapshot.payouts ?? [];
+      this.quotes = snapshot.quotes ?? [];
+      this.fundingInstructions = snapshot.fundingInstructions ?? [];
+      this.fundingTransactions = snapshot.fundingTransactions ?? [];
+      this.approvalDecisions = snapshot.approvalDecisions ?? [];
+      this.complianceCases = snapshot.complianceCases ?? [];
+      this.ledgerEntries = snapshot.ledgerEntries ?? [];
+      this.webhookEvents = snapshot.webhookEvents ?? [];
+      this.auditLogs = snapshot.auditLogs ?? [];
+      this.exceptions = snapshot.exceptions ?? [];
+      return true;
+    } catch {
+      rmSync(this.stateFilePath, { force: true });
+      return false;
+    }
+  }
+
+  private saveState(): void {
+    const snapshot: DemoDomainSnapshot = {
+      company: this.company,
+      beneficiaries: this.beneficiaries,
+      batches: this.batches,
+      payouts: this.payouts,
+      quotes: this.quotes,
+      fundingInstructions: this.fundingInstructions,
+      fundingTransactions: this.fundingTransactions,
+      approvalDecisions: this.approvalDecisions,
+      complianceCases: this.complianceCases,
+      ledgerEntries: this.ledgerEntries,
+      webhookEvents: this.webhookEvents,
+      auditLogs: this.auditLogs,
+      exceptions: this.exceptions,
+    };
+
+    mkdirSync(dirname(this.stateFilePath), { recursive: true });
+    writeFileSync(this.stateFilePath, JSON.stringify(snapshot, null, 2));
   }
 
   private stripPassword(user: DemoUserRecord): SessionUser {
@@ -1140,19 +1312,4 @@ export class DemoDomainService {
     return configuredWallets?.length ? configuredWallets : ["ACME-FUNDING-WALLET-001"];
   }
 
-  private seedDemoBatch(): void {
-    const user = this.stripPassword(this.users[0]);
-    const detail = this.createBatch(user, {
-      name: "April contractor payroll",
-      payouts: [
-        { beneficiaryId: "ben_co_001", amountLocal: 1800000 },
-        { beneficiaryId: "ben_mx_001", amountLocal: 22000 },
-      ],
-    });
-
-    detail.payouts.forEach((payout) => {
-      this.updatePayout(user, payout.id, { approvalStatus: "approved" });
-    });
-    this.createQuote(user, detail.batch.id);
-  }
 }

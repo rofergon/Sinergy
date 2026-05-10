@@ -25,7 +25,7 @@ export class SolanaFundingGateway {
   }
 
   getTreasuryWalletAddress(): string {
-    return process.env.SOLANA_TREASURY_WALLET ?? "11111111111111111111111111111111";
+    return process.env.SOLANA_TREASURY_WALLET ?? "89gXyfcgXF4WUmz88W9dqdQbRbgCXTFtcE2USBHvmwAL";
   }
 
   getTreasuryTokenAccount(): string {

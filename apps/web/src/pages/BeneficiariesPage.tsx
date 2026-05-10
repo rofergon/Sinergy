@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CountryCode, CreateBeneficiaryDto } from "@latam-payouts/contracts";
 import { MetricIcon } from "../components/icons";
@@ -20,6 +20,23 @@ type BeneficiariesPageProps = {
 };
 
 type CountryFilter = "ALL" | CountryCode;
+type AvatarSlot = {
+  sheet: string;
+  position: string;
+};
+
+const avatarSlots: Record<string, AvatarSlot> = {
+  ben_co_001: { sheet: "/avatars/employee-sheet-1.png", position: "0% 0%" },
+  ben_co_002: { sheet: "/avatars/employee-sheet-1.png", position: "100% 0%" },
+  ben_co_003: { sheet: "/avatars/employee-sheet-1.png", position: "100% 100%" },
+  ben_mx_001: { sheet: "/avatars/employee-sheet-1.png", position: "0% 100%" },
+  ben_mx_002: { sheet: "/avatars/employee-sheet-2.png", position: "0% 0%" },
+  ben_mx_003: { sheet: "/avatars/employee-sheet-2.png", position: "0% 100%" },
+  ben_mx_004: { sheet: "/avatars/employee-sheet-2.png", position: "100% 100%" },
+  ben_ar_001: { sheet: "/avatars/employee-sheet-3.png", position: "0% 0%" },
+  ben_ar_002: { sheet: "/avatars/employee-sheet-3.png", position: "100% 0%" },
+  ben_ar_003: { sheet: "/avatars/employee-sheet-3.png", position: "100% 100%" },
+};
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -31,6 +48,31 @@ function formatDate(value: string) {
 
 function humanize(value: string) {
   return value.replace(/_/g, " ");
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function EmployeeAvatar({ beneficiary, size = "small" }: { beneficiary: Beneficiary; size?: "small" | "large" }) {
+  const avatar = avatarSlots[beneficiary.id];
+  const style = avatar
+    ? ({
+        backgroundImage: `url(${avatar.sheet})`,
+        backgroundPosition: avatar.position,
+      } satisfies CSSProperties)
+    : undefined;
+
+  return (
+    <span className={`employee-avatar ${size === "large" ? "large" : ""} ${avatar ? "photo" : ""}`} style={style} aria-hidden="true">
+      {avatar ? null : getInitials(beneficiary.name)}
+    </span>
+  );
 }
 
 function downloadBeneficiaryRecord(beneficiary: Beneficiary, history: Array<Record<string, string | number>>) {
@@ -308,8 +350,13 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
                       onClick={() => setSelectedBeneficiaryId(beneficiary.id)}
                     >
                       <td>
-                        <strong>{beneficiary.name}</strong>
-                        <span className="cell-subtext">{beneficiary.email}</span>
+                        <span className="employee-name-cell">
+                          <EmployeeAvatar beneficiary={beneficiary} />
+                          <span>
+                            <strong>{beneficiary.name}</strong>
+                            <span className="cell-subtext">{beneficiary.email}</span>
+                          </span>
+                        </span>
                       </td>
                       <td>
                         <span className="country-cell">
@@ -369,6 +416,15 @@ export function BeneficiariesPage({ data, form, setForm, onCreate }: Beneficiari
                 >
                   Export record
                 </button>
+              </div>
+
+              <div className="people-profile-overview">
+                <EmployeeAvatar beneficiary={selectedBeneficiary} size="large" />
+                <div>
+                  <strong>{selectedBeneficiary.name}</strong>
+                  <span>{selectedBeneficiary.email}</span>
+                  <small>{selectedBeneficiary.projectName || "No project assigned"}</small>
+                </div>
               </div>
 
               <div className="people-history-summary">

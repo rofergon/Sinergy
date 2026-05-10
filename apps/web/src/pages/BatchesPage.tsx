@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { BatchStatus, CreateBatchDto, Payout, SessionUser, UpdatePayoutDto } from "@latam-payouts/contracts";
-import { createTransferCheckedInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import type { Transaction } from "@solana/web3.js";
 import { MetricIcon } from "../components/icons";
 import { initialBatchForm, initialCsvImport } from "../constants/forms";
 import type { BatchDetail, Beneficiary, BootstrapPayload } from "../lib/api";
@@ -41,15 +40,18 @@ type ManualFundingForm = {
 
 type BrowserSolanaProvider = {
   isPhantom?: boolean;
+  isSolflare?: boolean;
   publicKey?: { toBase58(): string };
   connect: () => Promise<{ publicKey: { toBase58(): string } }>;
+  signMessage?: (message: Uint8Array, display?: "utf8" | "hex") => Promise<Uint8Array>;
   signTransaction?: (transaction: Transaction) => Promise<Transaction>;
-  signAndSendTransaction?: (transaction: Transaction) => Promise<{ signature: string }>;
+  signAndSendTransaction?: (transaction: Transaction) => Promise<{ signature: string } | string>;
 };
 
 declare global {
   interface Window {
     solana?: BrowserSolanaProvider;
+    solflare?: BrowserSolanaProvider;
   }
 }
 
@@ -65,6 +67,14 @@ type ProjectTableRow = {
   lastActivity: string;
   fundingInstructionId?: string;
 };
+
+const demoFlowSteps = [
+  { id: "login", label: "Login", note: "Admin demo user" },
+  { id: "upload", label: "Upload batch", note: "Import CSV" },
+  { id: "employees", label: "Approve employees", note: "Mark payable rows" },
+  { id: "batch", label: "Approve batch", note: "Treasury sign-off" },
+  { id: "execute", label: "Automated payouts", note: "Fund and send" },
+];
 
 const detailTabs: Array<{ id: DetailTab; label: string }> = [
   { id: "overview", label: "Overview" },
@@ -85,6 +95,18 @@ const countryMeta: Record<Exclude<CountryFilter, "ALL" | "UNKNOWN">, { label: st
 
 function formatMoney(value: number, currency: string) {
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)} ${currency}`;
+}
+
+function getEstimatedFxRate(country: string) {
+  return country === "CO" ? 4100 : 17.2;
+}
+
+function getPayoutUsdcAmount(payout: Payout) {
+  return Number((payout.amountLocal / getEstimatedFxRate(payout.country)).toFixed(2));
+}
+
+function getLocalAmountFromUsdc(usdcAmount: number, country: string) {
+  return Math.round(usdcAmount * getEstimatedFxRate(country));
 }
 
 function humanize(value: string) {
@@ -222,6 +244,38 @@ function getFundingStepItems(selectedBatch: BatchDetail) {
   ];
 }
 
+function getDemoFlowState(selectedBatch: BatchDetail | null) {
+  if (!selectedBatch) {
+    return { activeStep: "upload", completedSteps: new Set(["login"]) };
+  }
+
+  const completedSteps = new Set<string>(["login", "upload"]);
+  const hasApprovedPeople = selectedBatch.payouts.length > 0 && selectedBatch.payouts.every((payout) => payout.approvalStatus !== "pending");
+  const isBatchApproved = ["approved", "awaiting_funding", "funded", "dispatching", "in_review", "completed", "failed"].includes(selectedBatch.batch.status);
+  const hasExecution = selectedBatch.payouts.some((payout) => ["paid", "failed", "in_review", "dispatching"].includes(payout.status));
+
+  if (hasApprovedPeople) {
+    completedSteps.add("employees");
+  }
+  if (isBatchApproved) {
+    completedSteps.add("batch");
+  }
+  if (hasExecution || selectedBatch.batch.status === "completed") {
+    completedSteps.add("execute");
+  }
+
+  let activeStep = "employees";
+  if (!hasApprovedPeople) {
+    activeStep = "employees";
+  } else if (!isBatchApproved) {
+    activeStep = "batch";
+  } else {
+    activeStep = "execute";
+  }
+
+  return { activeStep, completedSteps };
+}
+
 function getNextActionDescription(row: ProjectTableRow | undefined, selectedBatch: BatchDetail | null) {
   if (!row) {
     return "Open or create a payment project to continue.";
@@ -282,8 +336,8 @@ function buildFundingInstructionText(selectedBatch: BatchDetail) {
     `Project: ${selectedBatch.batch.name}`,
     `Amount due: ${instruction.expectedAmount.toFixed(2)} ${instruction.asset}`,
     `Network: Solana ${instruction.cluster}`,
-    `Destination wallet: ${instruction.recipientAddress}`,
-    `Token account: ${instruction.recipientTokenAccount}`,
+    `Internal vault owner: ${instruction.recipientAddress}`,
+    `Internal USDC vault account: ${instruction.recipientTokenAccount}`,
     `Reference: ${instruction.reference}`,
     `Memo: ${instruction.memo ?? "N/A"}`,
   ].join("\n");
@@ -303,6 +357,18 @@ function getRpcUrlForCluster(cluster?: string) {
     return "http://127.0.0.1:8899";
   }
   return "https://api.testnet.solana.com";
+}
+
+async function ensureBrowserBuffer() {
+  const target = globalThis as typeof globalThis & { Buffer?: unknown };
+  if (!target.Buffer) {
+    const { Buffer } = await import("buffer");
+    target.Buffer = Buffer;
+  }
+}
+
+function getInjectedSolanaProvider() {
+  return window.solflare ?? window.solana;
 }
 
 export function BatchesPage({
@@ -344,6 +410,9 @@ export function BatchesPage({
   const [connectedWallet, setConnectedWallet] = useState("");
   const [walletFundingMessage, setWalletFundingMessage] = useState("");
   const [isWalletFunding, setIsWalletFunding] = useState(false);
+  const [selectedApprovalPayoutIds, setSelectedApprovalPayoutIds] = useState<Set<string>>(new Set());
+  const [isSigningApprovals, setIsSigningApprovals] = useState(false);
+  const [approvalSignatureMessage, setApprovalSignatureMessage] = useState("");
 
   const beneficiaries = data?.beneficiaries ?? [];
   const batches = data?.batches ?? [];
@@ -369,6 +438,11 @@ export function BatchesPage({
       openBatch(batches[0].id);
     }
   }, [batches, openBatch, searchParams, selectedBatch]);
+
+  useEffect(() => {
+    setSelectedApprovalPayoutIds(new Set(selectedProjectPayouts.filter((payout) => payout.approvalStatus === "pending").map((payout) => payout.id)));
+    setApprovalSignatureMessage("");
+  }, [selectedBatch?.batch.id, selectedProjectPayouts.length]);
 
   const projectRows = useMemo<ProjectTableRow[]>(() => {
     return batches.map((batch) => {
@@ -396,6 +470,7 @@ export function BatchesPage({
 
   const selectedProjectRow = selectedBatch ? projectRows.find((row) => row.batchId === selectedBatch.batch.id) : undefined;
   const selectedOpenExceptions = (data?.exceptions ?? []).filter((entry) => entry.status === "open" && entry.batchId === selectedBatch?.batch.id);
+  const demoFlowState = getDemoFlowState(selectedBatch);
   const selectedNextActionLabel = getNextActionLabel(
     selectedProjectRow ?? {
       batchId: selectedBatch?.batch.id ?? "",
@@ -501,6 +576,21 @@ export function BatchesPage({
     }
   }
 
+  function handleCsvFileUpload(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCsvImport(String(reader.result ?? ""));
+      if (!batchForm.name || batchForm.name === initialBatchForm.name) {
+        setBatchForm({ ...batchForm, name: file.name.replace(/\.csv$/i, "").replace(/[-_]/g, " ") });
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function openManualFundingModal() {
     if (!selectedBatch?.fundingInstruction) {
       return;
@@ -549,14 +639,20 @@ export function BatchesPage({
   }
 
   async function connectFundingWallet() {
-    const provider = window.solana;
+    const provider = getInjectedSolanaProvider();
     if (!provider) {
-      setWalletFundingMessage("No Solana browser wallet found. Install Phantom or another Solana wallet.");
+      setWalletFundingMessage("No Solana wallet detected. Open this page in Chrome with Solflare enabled, then refresh the tab.");
       return undefined;
     }
 
     const response = await provider.connect();
-    const walletAddress = response.publicKey.toBase58();
+    const publicKey = response.publicKey ?? provider.publicKey;
+    if (!publicKey) {
+      setWalletFundingMessage("Wallet connected, but no public key was returned. Unlock Solflare and try again.");
+      return undefined;
+    }
+
+    const walletAddress = publicKey.toBase58();
     setConnectedWallet(walletAddress);
     setWalletFundingMessage("");
     return { provider, walletAddress };
@@ -570,11 +666,17 @@ export function BatchesPage({
     setIsWalletFunding(true);
     setWalletFundingMessage("Preparing wallet transaction...");
     try {
-      const connected = connectedWallet && window.solana ? { provider: window.solana, walletAddress: connectedWallet } : await connectFundingWallet();
+      const provider = getInjectedSolanaProvider();
+      const connected = connectedWallet && provider ? { provider, walletAddress: connectedWallet } : await connectFundingWallet();
       if (!connected) {
         return;
       }
 
+      await ensureBrowserBuffer();
+      const [{ createTransferCheckedInstruction, getAssociatedTokenAddressSync }, { Connection, PublicKey, Transaction }] = await Promise.all([
+        import("@solana/spl-token"),
+        import("@solana/web3.js"),
+      ]);
       const instruction = selectedBatch.fundingInstruction;
       const decimals = Number(import.meta.env.VITE_SOLANA_USDC_DECIMALS ?? 6);
       const connection = new Connection(getRpcUrlForCluster(instruction.cluster), "confirmed");
@@ -604,7 +706,7 @@ export function BatchesPage({
       let signature: string;
       if (connected.provider.signAndSendTransaction) {
         const result = await connected.provider.signAndSendTransaction(transaction);
-        signature = result.signature;
+        signature = typeof result === "string" ? result : result.signature;
       } else if (connected.provider.signTransaction) {
         const signed = await connected.provider.signTransaction(transaction);
         signature = await connection.sendRawTransaction(signed.serialize());
@@ -680,17 +782,108 @@ export function BatchesPage({
     }
   }
 
+  function toggleApprovalSelection(payoutId: string, checked: boolean) {
+    const next = new Set(selectedApprovalPayoutIds);
+    if (checked) {
+      next.add(payoutId);
+    } else {
+      next.delete(payoutId);
+    }
+    setSelectedApprovalPayoutIds(next);
+  }
+
+  async function signAndApproveSelectedEmployees() {
+    if (!selectedBatch) {
+      return;
+    }
+
+    const selectedPendingPayouts = selectedProjectPayouts.filter(
+      (payout) => payout.approvalStatus === "pending" && selectedApprovalPayoutIds.has(payout.id),
+    );
+
+    if (!selectedPendingPayouts.length) {
+      setApprovalSignatureMessage("Select at least one pending employee to approve.");
+      return;
+    }
+
+    const provider = getInjectedSolanaProvider();
+    if (!provider) {
+      setApprovalSignatureMessage("No Solana wallet detected. Unlock Solflare in Chrome, refresh the tab, and try again.");
+      return;
+    }
+    if (!provider.signMessage) {
+      setApprovalSignatureMessage("This wallet does not expose message signing. Enable Solflare permissions for this site and try again.");
+      return;
+    }
+
+    setIsSigningApprovals(true);
+    setApprovalSignatureMessage("Waiting for wallet signature...");
+    try {
+      const response = await provider.connect();
+      const publicKey = response.publicKey ?? provider.publicKey;
+      if (!publicKey) {
+        throw new Error("Wallet connected, but no public key was returned.");
+      }
+
+      const walletAddress = publicKey.toBase58();
+      const approvalMessage = [
+        "Sinergy Sol employee payout approval",
+        `Batch: ${selectedBatch.batch.name}`,
+        `Batch ID: ${selectedBatch.batch.id}`,
+        `Approver: ${session.name} (${session.email})`,
+        `Wallet: ${walletAddress}`,
+        `Employees: ${selectedPendingPayouts.map((payout) => payout.beneficiaryName).join(", ")}`,
+        `Payout IDs: ${selectedPendingPayouts.map((payout) => payout.id).join(", ")}`,
+        `Signed at: ${new Date().toISOString()}`,
+      ].join("\n");
+
+      await provider.signMessage(new TextEncoder().encode(approvalMessage), "utf8");
+      setConnectedWallet(walletAddress);
+      selectedPendingPayouts.forEach((payout) => onUpdatePayout(payout.id, { approvalStatus: "approved" }));
+      setSelectedApprovalPayoutIds(new Set());
+      setApprovalSignatureMessage(`Identity verified with ${walletAddress}. ${selectedPendingPayouts.length} employees sent for approval.`);
+    } catch (error) {
+      setApprovalSignatureMessage(error instanceof Error ? error.message : "Wallet signature was cancelled or failed.");
+    } finally {
+      setIsSigningApprovals(false);
+    }
+  }
+
+  function getSelectedPendingApprovalCount() {
+    return selectedProjectPayouts.filter(
+      (payout) => payout.approvalStatus === "pending" && selectedApprovalPayoutIds.has(payout.id),
+    ).length;
+  }
+
+  function renderEmployeeApprovalActions() {
+    const selectedPendingCount = getSelectedPendingApprovalCount();
+    return (
+      <div className="employee-approval-actions">
+        <span className="pill neutral">{selectedPendingCount} selected</span>
+        <button
+          className="primary"
+          onClick={() => void signAndApproveSelectedEmployees()}
+          disabled={!canEditPayoutApprovals || !selectedPendingCount || isSigningApprovals}
+        >
+          {isSigningApprovals ? "Waiting for signature..." : "Sign & approve selected"}
+        </button>
+      </div>
+    );
+  }
+
   function renderPeopleTable() {
     return (
       <div className="table-shell">
-        <table className="ops-table project-people-table">
+        <table className="ops-table project-people-table employee-approval-table">
           <thead>
             <tr>
-              <th>Person</th>
+              <th>Approve</th>
+              <th>Employee</th>
               <th>Bank</th>
-              <th>Amount</th>
-              <th>Approval</th>
-              <th>Payout</th>
+              <th>Market</th>
+              <th>Amount USDC</th>
+              <th>Funding required</th>
+              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -700,8 +893,22 @@ export function BatchesPage({
               const payoutException = (data?.exceptions ?? []).find(
                 (entry) => entry.status === "open" && (entry.payoutId === payout.id || (!entry.payoutId && entry.batchId === payout.batchId)),
               );
+              const isApproved = payout.approvalStatus === "approved";
+              const isSelectable = payout.approvalStatus === "pending" && canEditPayoutApprovals;
+              const isChecked = isApproved || selectedApprovalPayoutIds.has(payout.id);
               return (
-                <tr key={payout.id}>
+                <tr key={payout.id} className={isChecked ? "approval-selected-row" : ""}>
+                  <td>
+                    <label className="approval-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={!isSelectable}
+                        onChange={(event) => toggleApprovalSelection(payout.id, event.target.checked)}
+                      />
+                      <span>{isApproved ? "Approved" : "Select"}</span>
+                    </label>
+                  </td>
                   <td>
                     <strong>{payout.beneficiaryName}</strong>
                     <span className="cell-subtext">
@@ -713,29 +920,44 @@ export function BatchesPage({
                     <span className="cell-subtext">{beneficiary?.validationStatus ?? "unknown"}</span>
                   </td>
                   <td>
+                    {payout.country in countryMeta ? (
+                      <img
+                        src={countryMeta[payout.country as Exclude<CountryFilter, "ALL" | "UNKNOWN">].flag}
+                        alt={getCountryLabel(payout.country as CountryFilter)}
+                        title={getCountryLabel(payout.country as CountryFilter)}
+                        className="employee-country-flag"
+                      />
+                    ) : (
+                      <span className="pill neutral">N/A</span>
+                    )}
+                  </td>
+                  <td>
                     {canEditProject ? (
                       <input
                         className="amount-cell-input"
                         type="number"
                         min="0"
-                        defaultValue={payout.amountLocal}
+                        step="0.01"
+                        defaultValue={getPayoutUsdcAmount(payout)}
                         onBlur={(event) => {
-                          const amountLocal = Number(event.target.value);
+                          const amountLocal = getLocalAmountFromUsdc(Number(event.target.value), payout.country);
                           if (amountLocal !== payout.amountLocal) {
                             onUpdatePayout(payout.id, { amountLocal });
                           }
                         }}
                       />
                     ) : (
-                      formatMoney(payout.amountLocal, payout.currency)
+                      `${getPayoutUsdcAmount(payout).toFixed(2)} USDC`
                     )}
-                    <span className="cell-subtext">{payout.fundingAmountUsdc.toFixed(2)} USDC</span>
+                    <span className="cell-subtext">≈ {formatMoney(payout.amountLocal, payout.currency)}</span>
+                  </td>
+                  <td>
+                    {payout.fundingAmountUsdc ? `${payout.fundingAmountUsdc.toFixed(2)} USDC` : "Pending quote"}
+                    <span className="cell-subtext">USDC funding</span>
                   </td>
                   <td>
                     <span className={`pill ${getApprovalTone(payout.approvalStatus)}`}>{humanize(payout.approvalStatus)}</span>
-                  </td>
-                  <td>
-                    <span className={`pill ${getBatchTone(payout.status)}`}>{humanize(payout.status)}</span>
+                    <span className="cell-subtext">{humanize(payout.status)}</span>
                     {payout.validationErrors.length ? <span className="cell-subtext danger-text">{payout.validationErrors[0]}</span> : null}
                     {payoutException ? <span className="cell-subtext danger-text">{payoutException.summary}</span> : null}
                   </td>
@@ -837,11 +1059,11 @@ export function BatchesPage({
                   <strong>Solana {instruction.cluster}</strong>
                 </div>
                 <div>
-                  <span>Destination wallet</span>
+                  <span>Internal vault owner</span>
                   <strong>{instruction.recipientAddress}</strong>
                 </div>
                 <div>
-                  <span>Token account</span>
+                  <span>Internal USDC vault account</span>
                   <strong>{instruction.recipientTokenAccount}</strong>
                 </div>
                 <div>
@@ -928,13 +1150,35 @@ export function BatchesPage({
 
   return (
     <section className="projects-page">
+      <section className="demo-flow-hero" aria-label="Recording flow">
+        <div>
+          <h2>Login, upload batch, approve employees, approve batch, automate payouts</h2>
+        </div>
+        <div className="demo-flow-rail">
+          {demoFlowSteps.map((step, index) => {
+            const isDone = demoFlowState.completedSteps.has(step.id);
+            const isActive = demoFlowState.activeStep === step.id;
+            return (
+              <div className={`demo-flow-step ${isDone ? "done" : ""} ${isActive ? "active" : ""}`} key={step.id}>
+                <span>{isDone ? "✓" : index + 1}</span>
+                <strong>{step.label}</strong>
+                <small>{step.note}</small>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <article className="panel ops-panel projects-shell">
         <div className="panel-title-row">
-          <h2>Projects</h2>
+          <div>
+            <h2>Batch workspace</h2>
+            <span className="helper">Start with CSV import, then use the selected batch panel for approvals and execution.</span>
+          </div>
           <div className="projects-toolbar-actions">
             <button className="tool-button" onClick={() => openCreateProjectModal("csv")} disabled={!canManageWorkspace}>
               <MetricIcon name="download" className="control-icon" />
-              Import CSV
+              Upload batch
             </button>
             <button className="primary projects-create-button" onClick={() => openCreateProjectModal("manual")} disabled={!canManageWorkspace}>
               Create project
@@ -992,7 +1236,6 @@ export function BatchesPage({
                   <tr>
                     <th />
                     <th>Project name</th>
-                    <th>Country</th>
                     <th>People</th>
                     <th>Approved</th>
                     <th>Pending</th>
@@ -1014,14 +1257,6 @@ export function BatchesPage({
                         </td>
                         <td>
                           <strong>{row.batchName}</strong>
-                        </td>
-                        <td>
-                          <div className="country-cell">
-                            {row.country !== "UNKNOWN" && row.country !== "ALL" ? (
-                              <img src={countryMeta[row.country].flag} alt="" className="country-flag" />
-                            ) : null}
-                            <span>{getCountryLabel(row.country)}</span>
-                          </div>
                         </td>
                         <td>{row.people}</td>
                         <td>{row.approved}</td>
@@ -1213,24 +1448,27 @@ export function BatchesPage({
             ) : null}
 
             {activeTab === "people" ? (
-              <section className="project-section">
+              <section className="project-section employee-approval-panel">
                 <div className="panel-title-row">
-                  <h2>People</h2>
-                  <span className="helper">
-                    {selectedProjectStats.excluded.length} excluded · {selectedProjectStats.failed.length} failed
-                  </span>
+                  <div>
+                    <h2>Employees & approvals</h2>
+                    <span className="helper">One list for payout review, wallet-signed employee approval, funding status, and payout actions.</span>
+                  </div>
+                  {renderEmployeeApprovalActions()}
                 </div>
                 {renderPeopleTable()}
+                {approvalSignatureMessage ? <div className="approval-signature-message">{approvalSignatureMessage}</div> : null}
               </section>
             ) : null}
 
             {activeTab === "approvals" ? (
               <section className="project-section">
                 <div className="panel-title-row">
-                  <h2>Approvals</h2>
-                  <span className="helper">
-                    {selectedProjectStats.approved.length} approved · {selectedProjectStats.pending.length} pending
-                  </span>
+                  <div>
+                    <h2>Approval control room</h2>
+                    <span className="helper">Approve employees first, then approve the complete batch for treasury funding.</span>
+                  </div>
+                  {renderEmployeeApprovalActions()}
                 </div>
                 {!canApproveProject ? <p className="helper">Project approval requires the `approver` or `admin` demo user.</p> : null}
                 <div className="info-strip">
@@ -1254,12 +1492,13 @@ export function BatchesPage({
                     </button>
                   ) : null}
                   {canApproveProject ? (
-                    <button className="ghost" onClick={() => onApprove(selectedBatch.batch.id)}>
-                      Approve project
+                    <button className="ghost batch-approval-button" onClick={() => onApprove(selectedBatch.batch.id)}>
+                      Approve batch
                     </button>
                   ) : null}
                 </div>
                 {renderPeopleTable()}
+                {approvalSignatureMessage ? <div className="approval-signature-message">{approvalSignatureMessage}</div> : null}
               </section>
             ) : null}
 
@@ -1462,8 +1701,25 @@ export function BatchesPage({
                   Project name
                   <input value={batchForm.name} onChange={(event) => setBatchForm({ ...batchForm, name: event.target.value })} />
                 </label>
+                <div className="csv-upload-card">
+                  <div>
+                    <strong>Upload a CSV file</strong>
+                    <span>Expected columns: beneficiaryId, amountLocal.</span>
+                  </div>
+                  <label className="csv-file-control">
+                    <span>Select CSV</span>
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      onChange={(event) => handleCsvFileUpload(event.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  <a className="csv-sample-link" href="/demo-batch-import.csv" download>
+                    Download mock CSV
+                  </a>
+                </div>
                 <label>
-                  CSV import
+                  CSV preview
                   <textarea value={csvImport} onChange={(event) => setCsvImport(event.target.value)} rows={10} />
                 </label>
                 <div className="modal-actions">
@@ -1503,7 +1759,7 @@ export function BatchesPage({
                 <strong>{selectedBatch.fundingInstruction.reference}</strong>
               </div>
               <div>
-                <span>Destination</span>
+                <span>Internal USDC vault</span>
                 <strong>{selectedBatch.fundingInstruction.recipientTokenAccount}</strong>
               </div>
             </div>
