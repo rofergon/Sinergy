@@ -11,6 +11,8 @@ type WorkspaceActionOptions = {
   refreshWorkspace: (token: string, batchToRefresh?: BatchDetail | null) => Promise<void>;
 };
 
+const paymentsMadeMessage = "Success! Payments have been made.";
+
 export function useOperationsActions({
   session,
   selectedBatch,
@@ -92,7 +94,7 @@ export function useOperationsActions({
           return detail;
         }
         return undefined;
-      }, "Funding status refreshed.");
+      }, paymentsMadeMessage);
     },
     recordFallbackFunding(instructionId: string, payload: { txHash: string; amountReceived: number }) {
       return runAction(async () => {
@@ -107,7 +109,7 @@ export function useOperationsActions({
           return detail;
         }
         return undefined;
-      }, "Manual funding fallback recorded.");
+      }, paymentsMadeMessage);
     },
     dispatchPayout(payoutId: string) {
       void runAction(async () => {
@@ -136,7 +138,7 @@ export function useOperationsActions({
         const detail = await api.sendApprovedPayouts(session!.accessToken, batchId);
         setSelectedBatch(detail);
         return detail;
-      }, "Approved payments sent.");
+      }, paymentsMadeMessage);
     },
     resolveException(exceptionId: string) {
       void runAction(() => api.resolveException(session!.accessToken, exceptionId), "Exception resolved.");

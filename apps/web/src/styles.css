@@ -709,6 +709,15 @@ label {
   margin-bottom: 1rem;
 }
 
+.demo-success-banner {
+  width: fit-content;
+  color: #ffffff;
+  background: linear-gradient(135deg, #087a4d, #16a34a 48%, #22c55e);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 16px 36px rgba(8, 122, 77, 0.28);
+  font-weight: 800;
+}
+
 .page-grid {
   display: grid;
   gap: 1.2rem;

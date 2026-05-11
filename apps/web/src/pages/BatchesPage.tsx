@@ -673,7 +673,7 @@ export function BatchesPage({
       }
 
       await ensureBrowserBuffer();
-      const [{ createTransferCheckedInstruction, getAssociatedTokenAddressSync }, { Connection, PublicKey, Transaction }] = await Promise.all([
+      const [{ createTransferCheckedInstruction, getAccount, getAssociatedTokenAddressSync }, { Connection, PublicKey, Transaction }] = await Promise.all([
         import("@solana/spl-token"),
         import("@solana/web3.js"),
       ]);
@@ -686,6 +686,30 @@ export function BatchesPage({
       const destinationTokenAccount = new PublicKey(instruction.recipientTokenAccount);
       const reference = new PublicKey(instruction.reference);
       const rawAmount = BigInt(Math.round(instruction.expectedAmount * 10 ** decimals));
+
+      const [sourceAccount, destinationAccount, walletLamports] = await Promise.all([
+        getAccount(connection, sourceTokenAccount).catch(() => undefined),
+        getAccount(connection, destinationTokenAccount).catch(() => undefined),
+        connection.getBalance(owner, "confirmed"),
+      ]);
+
+      if (walletLamports < 10_000) {
+        throw new Error("This wallet needs a small amount of testnet SOL to pay the Solana network fee before funding.");
+      }
+      if (!sourceAccount) {
+        throw new Error("This wallet does not have a token account for the mock USDC mint. Ask ops to mint mock USDC to this wallet first.");
+      }
+      if (!sourceAccount.mint.equals(mint)) {
+        throw new Error("The connected wallet token account does not match the funding USDC mint.");
+      }
+      if (sourceAccount.amount < rawAmount) {
+        const balance = Number(sourceAccount.amount) / 10 ** decimals;
+        throw new Error(`This wallet only has ${balance.toFixed(2)} USDC mock, below the required ${instruction.expectedAmount.toFixed(2)} USDC.`);
+      }
+      if (!destinationAccount || !destinationAccount.mint.equals(mint)) {
+        throw new Error("The funding vault token account is missing or does not match the mock USDC mint.");
+      }
+
       const transferInstruction = createTransferCheckedInstruction(
         sourceTokenAccount,
         mint,

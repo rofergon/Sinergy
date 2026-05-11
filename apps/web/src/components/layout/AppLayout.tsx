@@ -21,6 +21,10 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+function isDemoSuccessMessage(message: string) {
+  return message === "Success! Payments have been made.";
+}
+
 export function AppLayout({ children, loading, message, session, onLogout }: AppLayoutProps) {
   const location = useLocation();
   const isMonitoring = location.pathname === "/";
@@ -65,7 +69,9 @@ export function AppLayout({ children, loading, message, session, onLogout }: App
           </header>
         ) : null}
 
-        {message && message !== "Failed to fetch" ? <div className="banner">{message}</div> : null}
+        {message && message !== "Failed to fetch" ? (
+          <div className={isDemoSuccessMessage(message) ? "banner demo-success-banner" : "banner"}>{message}</div>
+        ) : null}
 
         {children}
       </main>
